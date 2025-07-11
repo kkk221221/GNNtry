@@ -104,9 +104,13 @@ class TestPromptFormatting(unittest.TestCase):
         gateway = self._create_gateway_with_prompts(prompts_data)
 
         # 尝试格式化一个不存在的 Prompt 名称
-        with self.assertRaisesRegex(PromptTemplateError,
-                                     "Prompt 模板 'non_existent_template_name' 未在 Prompt 文件中定义。"):
-            gateway._format_prompt("non_existent_template_name", {})
+        template_name = "non_existent_template_name"
+        expected_error_regex = (
+            f"Prompt Template Error \\(Template: {template_name}\\): "
+            f"名为 '{template_name}' 的 Prompt 模板未在 Prompt 文件中定义。"
+        )
+        with self.assertRaisesRegex(PromptTemplateError, expected_error_regex):
+            gateway._format_prompt(template_name, {})
 
     def test_format_prompt_missing_key_in_context(self):
         """测试场景：当提供的上下文字典中缺少 Prompt 模板所必需的键（占位符）时，应抛出 PromptTemplateError。"""

@@ -59,10 +59,12 @@ class LLMGateway:
                                     或包含无效的配置项 (例如，模型定义不完整)。
         """
         logger.info(f"正在初始化 LLMGateway，配置文件路径: '{config_path}', Prompt 文件路径: '{prompt_path}'")
+        self.config_file_path: str = config_path
+        self.prompt_file_path: str = prompt_path
 
         # 加载主配置文件和 Prompt 模板
-        self.config: Dict[str, Any] = self._load_config(config_path)
-        self.prompts: Dict[str, Any] = self._load_prompts(prompt_path)
+        self.config: Dict[str, Any] = self._load_config(self.config_file_path)
+        self.prompts: Dict[str, Any] = self._load_prompts(self.prompt_file_path)
 
         # 初始化所有在配置中定义的、且有有效 API 密钥的 Provider
         self.providers: Dict[str, BaseProvider] = self._init_providers()
@@ -281,7 +283,7 @@ class LLMGateway:
         if not isinstance(models_config, list):
             msg = "配置文件中的 'models' 部分必须是一个列表 (list of model definitions)。"
             logger.error(msg)
-            raise ConfigurationError(msg, config_file_path=self.config_path) # 使用 self.config_path
+            raise ConfigurationError(msg, config_file_path=self.config_file_path)
 
         if not models_config:
             logger.warning("配置文件中 'models' 部分为空或未定义，将无法通过别名使用任何模型。")
@@ -292,7 +294,7 @@ class LLMGateway:
             if not isinstance(model_entry, dict):
                 msg = f"模型定义列表中的条目 #{i+1} 不是一个有效的字典。每个模型定义都应为字典格式。"
                 logger.error(msg)
-                raise ConfigurationError(msg, config_file_path=self.config_path)
+                raise ConfigurationError(msg, config_file_path=self.config_file_path)
 
             model_name = model_entry.get('name')
             provider_id = model_entry.get('provider') # Provider ID, e.g., "google"
@@ -302,15 +304,15 @@ class LLMGateway:
             if not model_name or not isinstance(model_name, str):
                 msg = f"模型定义条目 #{i+1} (内容: {model_entry}) 缺少有效的 'name' 字符串字段。"
                 logger.error(msg)
-                raise ConfigurationError(msg, config_file_path=self.config_path)
+                raise ConfigurationError(msg, config_file_path=self.config_file_path)
             if not provider_id or not isinstance(provider_id, str):
                 msg = f"模型 '{model_name}' (条目 #{i+1}) 缺少有效的 'provider' 字符串字段。"
                 logger.error(msg)
-                raise ConfigurationError(msg, config_file_path=self.config_path)
+                raise ConfigurationError(msg, config_file_path=self.config_file_path)
             if not isinstance(aliases, list) or not all(isinstance(alias, str) for alias in aliases):
                 msg = f"模型 '{model_name}' (条目 #{i+1}) 的 'aliases' 字段必须是一个字符串列表。"
                 logger.error(msg)
-                raise ConfigurationError(msg, config_file_path=self.config_path)
+                raise ConfigurationError(msg, config_file_path=self.config_file_path)
 
             if not aliases: # 模型没有别名
                 logger.warning(
@@ -836,163 +838,163 @@ class SuggestedDatasets(BaseModel):
     datasets: list[dict]
 
 # 主函数块，用于基本测试和演示。后续将用单元测试替代。
-# if __name__ == '__main__':
-#     # 为了能运行这个示例，需要创建临时的配置文件和 prompt 文件
-#     # 或者确保当前目录下有符合预期的 config.yaml 和 prompts.toml
-#
-#     TEMP_CONFIG_PATH = "temp_llm_gateway_config.yaml"
-#     TEMP_PROMPTS_PATH = "temp_llm_gateway_prompts.toml"
-#
-#     # 1. 创建示例 config.yaml
-#     sample_config_content = """
-# api_keys:
-#   google_gemini: "env:GEMINI_API_KEY_DUMMY"
-#   # anthropic_claude: "env:ANTHROPIC_API_KEY_DUMMY"
-#
-# models:
-#   - name: "gemini-1.5-pro-latest"
-#     provider: "google" # 对应 api_keys 中的 'google_gemini'
-#     aliases: ["smart_model", "default_text_model"]
-#   - name: "gemini-1.5-flash-latest"
-#     provider: "google"
-#     aliases: ["fast_model"]
-#   # - name: "claude-3-opus-20240229"
-#   #   provider: "anthropic"
-#   #   aliases: ["claude_opus", "advanced_reasoning"]
-#
-# retry_policy:
-#   max_retries: 2
-#   backoff_factor: 1.5
-#   initial_wait_seconds: 0.5
-#   max_wait_seconds: 30
-#
-# # 可选: Provider 特定配置
-# # provider_specific_configs:
-# #   google:
-# #     default_temperature: 0.6
-# #     safety_settings: # 覆盖 GeminiProvider 中的默认安全设置
-# #       HARM_CATEGORY_HARASSMENT: "BLOCK_NONE"
-# #       # 注意: 这里的键需要和 google.generativeai.types.HarmCategory 的枚举成员名称字符串匹配
-# #       # 或者在 GeminiProvider 中处理字符串到枚举的转换
-# """
-#     with open(TEMP_CONFIG_PATH, "w", encoding="utf-8") as f:
-#         f.write(sample_config_content)
-#     logger.info(f"创建了临时配置文件: {TEMP_CONFIG_PATH}")
-#
-#     # 2. 创建示例 prompts.toml
-#     sample_prompts_content = """
-# [propose_strategy]
-# template = '''
-# 将以下科研问题转化为搜索关键词: "{user_query}"
-# 请以JSON格式返回，包含'pubmed_query'和'analysis_type'字段。
-# '''
-#
-# [generate_samplesheet]
-# template = """Generate a samplesheet for file list {file_list}."""
-#
-# [summarize]
-# template = "请总结以下文本：{text_to_summarize}"
-# """
-#     with open(TEMP_PROMPTS_PATH, "w", encoding="utf-8") as f:
-#         f.write(sample_prompts_content)
-#     logger.info(f"创建了临时 Prompt 文件: {TEMP_PROMPTS_PATH}")
-#
-#     # 设置一个虚拟的环境变量用于测试 API key 加载
-#     os.environ["GEMINI_API_KEY_DUMMY"] = "dummy_gemini_api_key_for_testing_12345"
-#     logger.info("设置了虚拟环境变量 GEMINI_API_KEY_DUMMY。")
-#
-#     # 将日志级别设置为 DEBUG 以查看详细的加载过程
-#     logger.setLevel(logging.DEBUG)
-#     # 如果其他模块也使用 logging，可能需要更精细地控制 logger
-#     # logging.getLogger("aibiowflow.llm_gateway.gateway").setLevel(logging.DEBUG)
-#
-#
-#     try:
-#         logger.info("--- 开始 LLMGateway 初始化测试 ---")
-#         # 注意：此时 _init_providers 尚未完全实现，所以 providers 字典会是空的
-#         gateway = LLMGateway(config_path=TEMP_CONFIG_PATH, prompt_path=TEMP_PROMPTS_PATH)
-#         logger.info("--- LLMGateway 初始化成功 ---")
-#
-#         # 验证配置是否按预期加载
-#         assert gateway.config['api_keys']['google_gemini'] == "dummy_gemini_api_key_for_testing_12345"
-#         assert "propose_strategy" in gateway.prompts
-#         assert gateway.model_alias_map["fast_model"]["model_name"] == "gemini-1.5-flash-latest"
-#         assert gateway.max_retries == 2
-#
-#         logger.info("\n--- 测试 get_text_response (fast_model) ---")
-#         # 由于 providers 为空，这将使用占位符逻辑并可能记录警告
-#         text_resp = gateway.get_text_response(
-#             prompt_name="summarize",
-#             context={"text_to_summarize": "这是一个长长的文本，需要被总结。它包含很多细节。"},
-#             model_alias="fast_model"
-#         )
-#         logger.info(f"文本响应 (模拟): {text_resp}")
-#         assert "gemini-1.5-flash-latest" in text_resp # 检查模型名称是否在模拟响应中
-#
-#         logger.info("\n--- 测试 get_structured_response (smart_model) ---")
-#         # 同样，这将使用占位符逻辑
-#         structured_resp = gateway.get_structured_response(
-#             prompt_name="propose_strategy", # 这个 prompt 暗示了 JSON 输出
-#             context={"user_query": "寻找关于特定蛋白质的公共数据集"},
-#             output_schema=SuggestedDatasets,
-#             model_alias="smart_model"
-#         )
-#         logger.info(f"结构化响应 (模拟): {structured_resp.model_dump_json(indent=2)}")
-#         assert isinstance(structured_resp, SuggestedDatasets)
-#         assert structured_resp.analysis_type is not None # 检查模拟数据是否已填充
-#
-#         logger.info("\n--- 测试无效的 model_alias ---")
-#         try:
-#             gateway.get_text_response("summarize", {"text_to_summarize":"..." }, "non_existent_model_alias_123")
-#         except ValueError as e:
-#             logger.info(f"成功捕获预期的错误: {e}")
-#             assert "non_existent_model_alias_123" in str(e)
-#         else:
-#             assert False, "未捕获到无效 model_alias 的 ValueError"
-#
-#
-#         logger.info("\n--- 测试无效的 prompt_name ---")
-#         try:
-#             gateway.get_text_response("non_existent_prompt_name_456", {"text":"..."}, "fast_model")
-#         except PromptTemplateError as e:
-#             logger.info(f"成功捕获预期的错误: {e}")
-#             assert "non_existent_prompt_name_456" in str(e)
-#         else:
-#             assert False, "未捕获到无效 prompt_name 的 PromptTemplateError"
-#
-#         logger.info("\n--- 测试 Prompt 格式化错误 (缺少键) ---")
-#         try:
-#             # 'summarize' prompt 需要 'text_to_summarize'
-#             gateway.get_text_response("summarize", {"wrong_key": "some text"}, "fast_model")
-#         except PromptTemplateError as e:
-#             logger.info(f"成功捕获预期的 Prompt 格式化错误: {e}")
-#             assert "text_to_summarize" in str(e) # 错误信息应提示缺少的键
-#         else:
-#             assert False, "未捕获到 Prompt 格式化错误"
-#
-#
-#     except ConfigurationError as e:
-#         logger.error(f"测试过程中发生配置错误: {e}", exc_info=True)
-#     except Exception as e:
-#         logger.error(f"测试过程中发生未预料的错误: {e}", exc_info=True)
-#     finally:
-#         # 清理临时文件
-#         if os.path.exists(TEMP_CONFIG_PATH):
-#             os.remove(TEMP_CONFIG_PATH)
-#             logger.info(f"已删除临时配置文件: {TEMP_CONFIG_PATH}")
-#         if os.path.exists(TEMP_PROMPTS_PATH):
-#             os.remove(TEMP_PROMPTS_PATH)
-#             logger.info(f"已删除临时 Prompt 文件: {TEMP_PROMPTS_PATH}")
-#
-#         # 清理环境变量 (如果之前未设置)
-#         if "GEMINI_API_KEY_DUMMY_PREVIOUS_VALUE" in os.environ: # 假设我们保存了原始值
-#             os.environ["GEMINI_API_KEY_DUMMY"] = os.environ["GEMINI_API_KEY_DUMMY_PREVIOUS_VALUE"]
-#             del os.environ["GEMINI_API_KEY_DUMMY_PREVIOUS_VALUE"]
-#         elif "GEMINI_API_KEY_DUMMY" in os.environ and os.environ["GEMINI_API_KEY_DUMMY"] == "dummy_gemini_api_key_for_testing_12345":
-#              del os.environ["GEMINI_API_KEY_DUMMY"]
-#         logger.info("环境变量 GEMINI_API_KEY_DUMMY 已清理/恢复。")
-#
-#         logger.info("\n--- LLMGateway 配置加载及基础功能测试完成 ---")
+if __name__ == '__main__':
+    # 为了能运行这个示例，需要创建临时的配置文件和 prompt 文件
+    # 或者确保当前目录下有符合预期的 config.yaml 和 prompts.toml
+
+    TEMP_CONFIG_PATH = "temp_llm_gateway_config.yaml"
+    TEMP_PROMPTS_PATH = "temp_llm_gateway_prompts.toml"
+
+    # 1. 创建示例 config.yaml
+    sample_config_content = """
+api_keys:
+  google_gemini: "env:GEMINI_API_KEY_DUMMY"
+  # anthropic_claude: "env:ANTHROPIC_API_KEY_DUMMY"
+
+models:
+  - name: "gemini-1.5-pro-latest"
+    provider: "google" # 对应 api_keys 中的 'google_gemini'
+    aliases: ["smart_model", "default_text_model"]
+  - name: "gemini-1.5-flash-latest"
+    provider: "google"
+    aliases: ["fast_model"]
+  # - name: "claude-3-opus-20240229"
+  #   provider: "anthropic"
+  #   aliases: ["claude_opus", "advanced_reasoning"]
+
+retry_policy:
+  max_retries: 2
+  backoff_factor: 1.5
+  initial_wait_seconds: 0.5
+  max_wait_seconds: 30
+
+# 可选: Provider 特定配置
+# provider_specific_configs:
+#   google:
+#     default_temperature: 0.6
+#     safety_settings: # 覆盖 GeminiProvider 中的默认安全设置
+#       HARM_CATEGORY_HARASSMENT: "BLOCK_NONE"
+#       # 注意: 这里的键需要和 google.generativeai.types.HarmCategory 的枚举成员名称字符串匹配
+#       # 或者在 GeminiProvider 中处理字符串到枚举的转换
+"""
+    with open(TEMP_CONFIG_PATH, "w", encoding="utf-8") as f:
+        f.write(sample_config_content)
+    logger.info(f"创建了临时配置文件: {TEMP_CONFIG_PATH}")
+
+    # 2. 创建示例 prompts.toml
+    sample_prompts_content = """
+[propose_strategy]
+template = '''
+将以下科研问题转化为搜索关键词: "{user_query}"
+请以JSON格式返回，包含'pubmed_query'和'analysis_type'字段。
+'''
+
+[generate_samplesheet]
+template = '为文件列表 {file_list} 生成 samplesheet。'
+
+[summarize]
+template = "请总结以下文本：{text_to_summarize}"
+"""
+    with open(TEMP_PROMPTS_PATH, "w", encoding="utf-8") as f:
+        f.write(sample_prompts_content)
+    logger.info(f"创建了临时 Prompt 文件: {TEMP_PROMPTS_PATH}")
+
+    # 设置一个虚拟的环境变量用于测试 API key 加载
+    os.environ["GEMINI_API_KEY_DUMMY"] = "dummy_gemini_api_key_for_testing_12345"
+    logger.info("设置了虚拟环境变量 GEMINI_API_KEY_DUMMY。")
+
+    # 将日志级别设置为 DEBUG 以查看详细的加载过程
+    logger.setLevel(logging.DEBUG)
+    # 如果其他模块也使用 logging，可能需要更精细地控制 logger
+    # logging.getLogger("aibiowflow.llm_gateway.gateway").setLevel(logging.DEBUG)
+
+
+    try:
+        logger.info("--- 开始 LLMGateway 初始化测试 ---")
+        # 注意：此时 _init_providers 尚未完全实现，所以 providers 字典会是空的
+        gateway = LLMGateway(config_path=TEMP_CONFIG_PATH, prompt_path=TEMP_PROMPTS_PATH)
+        logger.info("--- LLMGateway 初始化成功 ---")
+
+        # 验证配置是否按预期加载
+        assert gateway.config['api_keys']['google_gemini'] == "dummy_gemini_api_key_for_testing_12345"
+        assert "propose_strategy" in gateway.prompts
+        assert gateway.model_alias_map["fast_model"]["model_name"] == "gemini-1.5-flash-latest"
+        assert gateway.max_retries == 2
+
+        logger.info("\n--- 测试 get_text_response (fast_model) ---")
+        # 由于 providers 为空，这将使用占位符逻辑并可能记录警告
+        text_resp = gateway.get_text_response(
+            prompt_name="summarize",
+            context={"text_to_summarize": "这是一个长长的文本，需要被总结。它包含很多细节。"},
+            model_alias="fast_model"
+        )
+        logger.info(f"文本响应 (模拟): {text_resp}")
+        assert "gemini-1.5-flash-latest" in text_resp # 检查模型名称是否在模拟响应中
+
+        logger.info("\n--- 测试 get_structured_response (smart_model) ---")
+        # 同样，这将使用占位符逻辑
+        structured_resp = gateway.get_structured_response(
+            prompt_name="propose_strategy", # 这个 prompt 暗示了 JSON 输出
+            context={"user_query": "寻找关于特定蛋白质的公共数据集"},
+            output_schema=SuggestedDatasets,
+            model_alias="smart_model"
+        )
+        logger.info(f"结构化响应 (模拟): {structured_resp.model_dump_json(indent=2)}")
+        assert isinstance(structured_resp, SuggestedDatasets)
+        assert structured_resp.analysis_type is not None # 检查模拟数据是否已填充
+
+        logger.info("\n--- 测试无效的 model_alias ---")
+        try:
+            gateway.get_text_response("summarize", {"text_to_summarize":"..." }, "non_existent_model_alias_123")
+        except ValueError as e:
+            logger.info(f"成功捕获预期的错误: {e}")
+            assert "non_existent_model_alias_123" in str(e)
+        else:
+            assert False, "未捕获到无效 model_alias 的 ValueError"
+
+
+        logger.info("\n--- 测试无效的 prompt_name ---")
+        try:
+            gateway.get_text_response("non_existent_prompt_name_456", {"text":"..."}, "fast_model")
+        except PromptTemplateError as e:
+            logger.info(f"成功捕获预期的错误: {e}")
+            assert "non_existent_prompt_name_456" in str(e)
+        else:
+            assert False, "未捕获到无效 prompt_name 的 PromptTemplateError"
+
+        logger.info("\n--- 测试 Prompt 格式化错误 (缺少键) ---")
+        try:
+            # 'summarize' prompt 需要 'text_to_summarize'
+            gateway.get_text_response("summarize", {"wrong_key": "some text"}, "fast_model")
+        except PromptTemplateError as e:
+            logger.info(f"成功捕获预期的 Prompt 格式化错误: {e}")
+            assert "text_to_summarize" in str(e) # 错误信息应提示缺少的键
+        else:
+            assert False, "未捕获到 Prompt 格式化错误"
+
+
+    except ConfigurationError as e:
+        logger.error(f"测试过程中发生配置错误: {e}", exc_info=True)
+    except Exception as e:
+        logger.error(f"测试过程中发生未预料的错误: {e}", exc_info=True)
+    finally:
+        # 清理临时文件
+        if os.path.exists(TEMP_CONFIG_PATH):
+            os.remove(TEMP_CONFIG_PATH)
+            logger.info(f"已删除临时配置文件: {TEMP_CONFIG_PATH}")
+        if os.path.exists(TEMP_PROMPTS_PATH):
+            os.remove(TEMP_PROMPTS_PATH)
+            logger.info(f"已删除临时 Prompt 文件: {TEMP_PROMPTS_PATH}")
+
+        # 清理环境变量 (如果之前未设置)
+        if "GEMINI_API_KEY_DUMMY_PREVIOUS_VALUE" in os.environ: # 假设我们保存了原始值
+            os.environ["GEMINI_API_KEY_DUMMY"] = os.environ["GEMINI_API_KEY_DUMMY_PREVIOUS_VALUE"]
+            del os.environ["GEMINI_API_KEY_DUMMY_PREVIOUS_VALUE"]
+        elif "GEMINI_API_KEY_DUMMY" in os.environ and os.environ["GEMINI_API_KEY_DUMMY"] == "dummy_gemini_api_key_for_testing_12345":
+             del os.environ["GEMINI_API_KEY_DUMMY"]
+        logger.info("环境变量 GEMINI_API_KEY_DUMMY 已清理/恢复。")
+
+        logger.info("\n--- LLMGateway 配置加载及基础功能测试完成 ---")
 
 """
 # 占位符，实际的 Provider 实现将在这里进行。

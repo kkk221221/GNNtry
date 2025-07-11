@@ -23,11 +23,13 @@ from aibiowflow.llm_gateway.exceptions import LLMAPIError, ConfigurationError
 
 # 尝试导入真实的 OpenAI 异常，如果导入失败，则使用 MagicMock 代替
 try:
-    from openai import APIError, APITimeoutError, APIStatusError
+    from openai import APIError, APITimeoutError, APIStatusError, APIConnectionError, RateLimitError
 except ImportError:
-    APIError = MagicMock
-    APITimeoutError = MagicMock
-    APIStatusError = MagicMock
+    APIError = MagicMock # type: ignore
+    APITimeoutError = MagicMock # type: ignore
+    APIStatusError = MagicMock # type: ignore
+    APIConnectionError = MagicMock # type: ignore
+    RateLimitError = MagicMock # type: ignore
 
 # Determine if actual OpenAI SDK is available for certain tests
 OPENAI_SDK_AVAILABLE = False
@@ -51,7 +53,9 @@ class TestQwenProvider(unittest.TestCase):
         self.mock_chat_completions_create = MagicMock()
         self.mock_openai_client_instance.chat.completions.create = self.mock_chat_completions_create
 
-        self.openai_patcher = patch('openai.OpenAI', return_value=self.mock_openai_client_instance)
+        # Patch where OpenAI is looked up by the QwenProvider module
+        self.openai_patcher = patch('aibiowflow.llm_gateway.providers.qwen_provider.OpenAI',
+                                    return_value=self.mock_openai_client_instance)
         self.mock_openai_constructor = self.openai_patcher.start()
 
 
@@ -200,11 +204,43 @@ class TestQwenProvider(unittest.TestCase):
         """测试不同 OpenAI API 错误被正确包装为 LLMAPIError。"""
         provider = QwenProvider()
 
+        # 创建一个模拟的 request 对象，某些异常需要它
+        mock_request = MagicMock()
+        if OPENAI_SDK_AVAILABLE: # If real SDK is there, create a real (dummy) request
+            try:
+                import httpx
+                mock_request = httpx.Request(method="POST", url="http://dummy.url/api")
+            except ImportError: # Should not happen if openai is installed, as httpx is a dependency
+                pass
+
+        # 创建一个模拟的 response 对象，APIStatusError 和 RateLimitError 需要它
+        mock_response_500 = MagicMock()
+        mock_response_500.status_code = 500 # For APIStatusError
+
+        mock_response_429 = MagicMock()
+        mock_response_429.status_code = 429 # For RateLimitError
+
+
+        # 定义测试用例，确保为每个异常提供必要的参数
+        # Note: Actual constructors for openai errors might vary slightly or evolve.
+        # This setup aims for compatibility with common patterns.
+        if OPENAI_SDK_AVAILABLE:
+            timeout_error_instance = APITimeoutError(request=mock_request)
+            # The str(APITimeoutError) is "Request timed out."
+            # _handle_api_exception uses this str(e) in its message.
+            timeout_message_check = "Request timed out"
+        else:
+            timeout_error_instance = APITimeoutError("请求超时") # MagicMock takes message
+            timeout_message_check = "超时" # This is part of "Qwen API 调用超时"
+
+        connection_error_message_check = "连接错误" # This is str(APIConnectionError(...)) and used in _handle_api_exception
+
         test_cases = [
-            (APIStatusError("服务内部错误", response=MagicMock(status_code=500), body=None), 500, "HTTP Status: 500"),
-            (APITimeoutError("请求超时"), None, "超时"),
-            (APIConnectionError("连接错误"), None, "连接失败"),
-            (APIError("未知API错误"), None, "未知API错误") # Generic APIError
+            (APIStatusError("服务内部错误", response=mock_response_500, body=None), 500, "HTTP Status: 500"),
+            (timeout_error_instance, None, timeout_message_check),
+            (APIConnectionError(message="连接错误", request=mock_request), None, connection_error_message_check),
+            (RateLimitError("速率限制", response=mock_response_429, body=None), 429, "速率限制"), # Check "速率限制" from provider's message
+            (APIError("未知API错误", request=mock_request, body=None), None, "未知API错误") # Check "未知API错误" from provider's message
         ]
 
         for original_exception, expected_status_code, part_of_message in test_cases:
@@ -225,31 +261,37 @@ class TestQwenProvider(unittest.TestCase):
         self.assertEqual(provider.provider_name, "qwen")
 
     # 测试openai SDK未安装的情况
-    @patch('builtins.__import__', side_effect=ImportError("No module named 'openai'"))
-    def test_initialization_openai_not_installed(self, mock_import):
+    def test_config_error_on_missing_openai_dependency(self):
         """
-        测试当 openai SDK 未安装时，QwenProvider 初始化应抛出 ConfigurationError。
-        注意：这个测试需要确保 QwenProvider 的导入发生在 patch 之后。
-        为了确保这一点，我们可能需要将 QwenProvider 的导入移到测试方法内部或使用更复杂的导入劫持。
-        一个简单的方法是重新加载模块，但更干净的是在模块级别进行patch，或者确保测试运行器隔离导入。
-        这里我们假设测试执行顺序和patch能正确工作，或者在项目结构上，这个测试文件可能不会直接导入QwenProvider顶层。
+        测试当 openai SDK 未安装时 (即模块内的 OpenAI 变量为 None)，
+        QwenProvider 初始化应抛出 ConfigurationError。
         """
-        # 卸载已加载的 QwenProvider (如果存在)，以便重新导入时触发 ImportError
-        import sys
-        if 'aibiowflow.llm_gateway.providers.qwen_provider' in sys.modules:
-            del sys.modules['aibiowflow.llm_gateway.providers.qwen_provider']
+        # Directly manipulate the OpenAI symbol in the imported qwen_provider module
+        import aibiowflow.llm_gateway.providers.qwen_provider as qwen_provider_module
 
-        with self.assertRaisesRegex(ConfigurationError, "openai 包未安装"):
-            from aibiowflow.llm_gateway.providers.qwen_provider import QwenProvider as QwenProviderLocal
-            QwenProviderLocal()
+        original_openai_symbol_in_module = getattr(qwen_provider_module, 'OpenAI', 'AttributeNotPresent')
+        qwen_provider_module.OpenAI = None # Set to None for this test
 
-        # 恢复正常的导入行为，以免影响其他测试
-        mock_import.side_effect = __import__
-        if 'aibiowflow.llm_gateway.providers.qwen_provider' in sys.modules:
-             del sys.modules['aibiowflow.llm_gateway.providers.qwen_provider']
-        # Ensure openai module is reloaded for subsequent tests if it was mocked
-        if 'openai' in sys.modules and mock_import.side_effect == __import__:
-            del sys.modules['openai']
+        original_env_val = os.environ.pop(DASHSCOPE_API_KEY_ENV_VAR, None)
+
+        try:
+            with self.assertRaisesRegex(ConfigurationError, "openai 包未安装"):
+                # QwenProvider will be instantiated using the qwen_provider_module.OpenAI which is now None
+                QwenProvider()
+        finally:
+            if original_env_val is not None:
+                os.environ[DASHSCOPE_API_KEY_ENV_VAR] = original_env_val
+
+            # Restore the OpenAI symbol in the qwen_provider module
+            if original_openai_symbol_in_module != 'AttributeNotPresent':
+                qwen_provider_module.OpenAI = original_openai_symbol_in_module
+            else: # If it wasn't there before (should not happen if module loaded)
+                if hasattr(qwen_provider_module, 'OpenAI'):
+                    delattr(qwen_provider_module, 'OpenAI')
+
+            # Optional: reload to be absolutely sure, though direct restoration should be enough
+            # import importlib
+            # importlib.reload(qwen_provider_module)
 
 
 # --- Integration Tests ---

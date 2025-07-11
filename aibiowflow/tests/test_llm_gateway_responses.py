@@ -157,9 +157,10 @@ class TestGatewayResponses(unittest.TestCase):
 
     def test_get_structured_response_invalid_json_from_provider(self):
         """测试当 provider 返回无效 JSON 时抛出 LLMOutputValidationError。"""
-        invalid_json_str = '{"name": "Bob", "age": "not_an_int"' # age 应该是 int
+        # Valid JSON syntax, but 'age' has a string value that cannot be parsed to an int.
+        invalid_type_json_str = '{"name": "Bob", "age": "this_is_not_an_integer"}'
         self.mock_provider.generate_structured_text.return_value = ProviderResponse(
-            text_content=invalid_json_str, model_name="mock-model-struct"
+            text_content=invalid_type_json_str, model_name="mock-model-struct"
         )
 
         with self.assertRaises(LLMOutputValidationError) as cm:
@@ -169,9 +170,11 @@ class TestGatewayResponses(unittest.TestCase):
                 output_schema=SimpleSchema,
                 model_alias="struct_alias"
             )
-        # 检查异常是否包含 Pydantic 的验证错误信息
-        self.assertIn("Input should be a valid integer", str(cm.exception.validation_errors)) # Pydantic v2
-        # 对于 Pydantic v1, 错误信息可能不同，例如 "value is not a valid integer"
+        # 检查异常是否包含 Pydantic 的验证错误信息 for 'age' field
+        # Pydantic v2 error for invalid integer string: "Input should be a valid integer, unable to parse string as an integer"
+        error_details_str = str(cm.exception.validation_errors).lower()
+        self.assertIn("'age'", error_details_str) # Check that the error is related to the 'age' field
+        self.assertIn("should be a valid integer", error_details_str) # General Pydantic message part
 
     def test_get_structured_response_json_not_matching_schema(self):
         """测试当 provider 返回的 JSON 结构不匹配 schema 时抛出 LLMOutputValidationError。"""
@@ -199,7 +202,12 @@ class TestGatewayResponses(unittest.TestCase):
         self.mock_provider.generate_structured_text.return_value = ProviderResponse(
             text_content=non_json_string, model_name="mock-model-struct"
         )
-        with self.assertRaisesRegex(LLMOutputValidationError, "LLM 输出不是有效的 JSON。"):
+
+        expected_regex = (
+            r"LLM 输出不符合 Pydantic schema 'SimpleSchema'\. Validation Details:.*"
+            r"Invalid JSON: expected value at line 1 column 1"
+        )
+        with self.assertRaisesRegex(LLMOutputValidationError, expected_regex):
             self.gateway.get_structured_response(
                 prompt_name="get_simple_data",
                 context={"item": "NonJson"},
@@ -237,7 +245,7 @@ class TestGatewayResponses(unittest.TestCase):
         debug_calls = [c for c in mock_logger.method_calls if c[0] == 'debug']
 
         self.assertTrue(any("LLM请求" in str(call_args) and "成功" in str(call_args) for call_args in info_calls))
-        self.assertTrue(any("详细日志条目" in str(call_args) for call_args in debug_calls))
+        self.assertTrue(any("详细的 LLM 请求日志条目:" in str(call_args) for call_args in debug_calls)) # Corrected string
 
         mock_logger.reset_mock() # 为下一次测试重置 mock
 
@@ -252,7 +260,7 @@ class TestGatewayResponses(unittest.TestCase):
         debug_calls_failure = [c for c in mock_logger.method_calls if c[0] == 'debug']
 
         self.assertTrue(any("LLM请求" in str(call_args) and "失败 (LLMAPIError)" in str(call_args) for call_args in error_calls))
-        self.assertTrue(any("详细日志条目" in str(call_args) and '"status": "failure"' in str(call_args) for call_args in debug_calls_failure))
+        self.assertTrue(any("详细的 LLM 请求日志条目:" in str(call_args) and '"status": "failure"' in str(call_args) for call_args in debug_calls_failure)) # Corrected string
 
 
 if __name__ == '__main__':

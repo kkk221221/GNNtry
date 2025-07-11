@@ -7,6 +7,7 @@ LLM 网关配置加载相关的单元测试。
 """
 import unittest
 import os
+import re # For escaping paths in regex
 import yaml # 用于写入测试用的 YAML 文件
 import toml # 用于写入测试用的 TOML 文件
 from unittest.mock import patch # 用于模拟 gateway._init_providers
@@ -118,7 +119,13 @@ class TestConfigLoading(unittest.TestCase):
 
         # 预期的错误消息应包含缺失的文件路径
         # 使用 os.path.abspath 来确保路径在不同系统上的一致性，以匹配错误消息中的路径
-        expected_error_regex = f"配置文件未找到: '{os.path.abspath(self.config_path)}'"
+        # expected_error_regex = f"配置文件未找到: '{os.path.abspath(self.config_path)}'"
+        # Adjusted regex to match ConfigurationError.__str__ format and use relative paths
+        escaped_relative_config_path = re.escape(self.config_path)
+        expected_error_regex = (
+            f"Configuration Error \\(File: {escaped_relative_config_path}\\): "
+            f"配置文件未找到: '{escaped_relative_config_path}'。"
+        )
         with self.assertRaisesRegex(ConfigurationError, expected_error_regex):
             LLMGateway(self.config_path, self.prompts_path)
 
@@ -129,7 +136,11 @@ class TestConfigLoading(unittest.TestCase):
             f.write("api_keys: \n  google: key\nthis_is_not_valid_yaml: [missing_bracket") # 无效YAML
         self._write_prompts({"some_prompt": {"template": "Test"}}) # 保证 prompts 文件有效
 
-        expected_error_regex = f"解析 YAML 配置文件 '{os.path.abspath(self.config_path)}' 失败"
+        escaped_relative_config_path = re.escape(self.config_path)
+        expected_error_regex = (
+            f"Configuration Error \\(File: {escaped_relative_config_path}\\): "
+            f"解析 YAML 配置文件 '{escaped_relative_config_path}' 失败。请检查文件格式。"
+        )
         with self.assertRaisesRegex(ConfigurationError, expected_error_regex):
             LLMGateway(self.config_path, self.prompts_path)
 
@@ -137,7 +148,11 @@ class TestConfigLoading(unittest.TestCase):
         """测试场景：当 prompts 文件 (`prompts.toml`) 不存在时，应抛出 ConfigurationError。"""
         self._write_config({"api_keys": {}, "models": []}) # 主配置文件存在且基本有效
 
-        expected_error_regex = f"Prompt 文件未找到: '{os.path.abspath(self.prompts_path)}'"
+        escaped_relative_prompts_path = re.escape(self.prompts_path)
+        expected_error_regex = (
+            f"Configuration Error \\(File: {escaped_relative_prompts_path}\\): "
+            f"Prompt 文件未找到: '{escaped_relative_prompts_path}'。"
+        )
         with self.assertRaisesRegex(ConfigurationError, expected_error_regex):
             LLMGateway(self.config_path, self.prompts_path)
 
@@ -148,7 +163,11 @@ class TestConfigLoading(unittest.TestCase):
             f.write("[prompt_one]\ntemplate = 'valid'\n[prompt_two # 缺少右方括号导致错误") # 无效TOML
         self._write_config({"api_keys": {}, "models": []}) # 主配置文件有效
 
-        expected_error_regex = f"解析 TOML Prompt 文件 '{os.path.abspath(self.prompts_path)}' 失败"
+        escaped_relative_prompts_path = re.escape(self.prompts_path)
+        expected_error_regex = (
+            f"Configuration Error \\(File: {escaped_relative_prompts_path}\\): "
+            f"解析 TOML Prompt 文件 '{escaped_relative_prompts_path}' 失败。请检查文件格式。"
+        )
         with self.assertRaisesRegex(ConfigurationError, expected_error_regex):
             LLMGateway(self.config_path, self.prompts_path)
 
