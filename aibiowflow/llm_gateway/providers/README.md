@@ -18,12 +18,12 @@
 
 ## 完成状态
 
-- [ ] 定义 `BaseProvider` 抽象基类 (`base_provider.py`)。
-- [ ] 实现 `GeminiProvider` (`gemini_provider.py`)。
-    - [ ] 实现文本生成方法。
-    - [ ] 实现结构化数据生成支持（如果 API 直接支持，或通过 prompt 工程）。
-    - [ ] 实现错误处理和映射到网关的自定义异常。
-    - [ ] 实现 token 计数和成本估算（如果 API 支持）。
+- [x] 定义 `BaseProvider` 抽象基类 (`base_provider.py`)。
+- [x] 实现 `GeminiProvider` (`gemini_provider.py`)。
+    - [x] 实现文本生成方法。
+    - [x] 实现结构化数据生成支持（通过 prompt 工程）。
+    - [x] 实现错误处理和映射到网关的自定义异常。
+    - [x] 实现 token 计数 (从 API 响应获取); 成本估算 (基础数据已获取，完整估算待增强)。
 - [ ] (可选) 为其他提供商（如 Anthropic, OpenAI）实现适配器。
 
 ## 注意事项

@@ -17,16 +17,16 @@
 
 ## 完成状态
 
-- [ ] 创建目录结构和基础文件。
-- [ ] 定义自定义异常 (`exceptions.py`)。
-- [ ] 实现配置加载 (`config.yaml`, `prompts.toml`)。
-- [ ] 实现 `BaseProvider` 抽象类。
-- [ ] 实现 `GeminiProvider` 类。
-- [ ] 实现 `LLMGateway` 核心逻辑。
-- [ ] 实现 `get_text_response` 方法。
-- [ ] 实现 `get_structured_response` 方法。
-- [ ] 编写单元测试。
-- [ ] 添加完整的代码注释和文档。
+- [x] 创建目录结构和基础文件。
+- [x] 定义自定义异常 (`exceptions.py`)。
+- [x] 实现配置加载 (`config.yaml`, `prompts.toml`)。
+- [x] 实现 `BaseProvider` 抽象类。
+- [x] 实现 `GeminiProvider` 类。
+- [x] 实现 `LLMGateway` 核心逻辑。
+- [x] 实现 `get_text_response` 方法。
+- [x] 实现 `get_structured_response` 方法。
+- [x] 编写单元测试 (覆盖核心功能，如配置、prompts、响应、重试、路由)。
+- [x] 添加完整的代码注释和文档 (主要模块和类已有较详细中文注释)。
 
 ## 注意事项
 
