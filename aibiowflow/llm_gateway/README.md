@@ -14,6 +14,7 @@
     *   `providers/__init__.py`: `providers` 子包初始化文件。
     *   `providers/base_provider.py`: 定义 LLM 提供商适配器的基类。
     *   `providers/gemini_provider.py`: Google Gemini LLM 提供商的实现。
+    *   `providers/qwen_provider.py`: 阿里云通义千问 (Qwen) LLM 提供商的实现。
 
 ## 完成状态
 

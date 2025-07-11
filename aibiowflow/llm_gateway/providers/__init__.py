@@ -9,6 +9,7 @@ LLM 提供商适配器子包。
 
 from .base_provider import BaseProvider
 from .gemini_provider import GeminiProvider
+from .qwen_provider import QwenProvider
 # 当添加更多 providers 时，在这里导入它们
 # from .anthropic_provider import AnthropicProvider
 # from .openai_provider import OpenAIProvider
@@ -16,6 +17,7 @@ from .gemini_provider import GeminiProvider
 __all__ = [
     "BaseProvider",
     "GeminiProvider",
+    "QwenProvider",
     # "AnthropicProvider",
     # "OpenAIProvider",
 ]

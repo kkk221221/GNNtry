@@ -6,6 +6,15 @@
 # 如果直接提供密钥字符串（不推荐用于生产），请确保文件权限安全。
 api_keys:
   google_gemini: "env:GEMINI_API_KEY" # 将从环境变量 GEMINI_API_KEY 加载
+  qwen: "env:DASHSCOPE_API_KEY"      # 将从环境变量 DASHSCOPE_API_KEY 加载
+
+# Provider 特定配置 (可选)
+# provider_specific_configs:
+#   qwen:
+#     base_url: "https://custom-qwen-compatible-url/v1" # 如果需要覆盖默认的兼容URL
+#     default_model_kwargs: # 这些参数会作为默认值传递给 OpenAI client.chat.completions.create
+#       top_p: 0.8
+#       # 其他OpenAI兼容参数...
 
 # 模型定义
 # 每个模型条目应包含:
@@ -21,6 +30,12 @@ models:
   - name: "gemini-1.5-flash" # 假设这是 Google Gemini Flash 模型的标识符
     provider: "google"
     aliases: ["fast_model"]
+  - name: "qwen-plus" # 示例：通义千问 Plus 模型
+    provider: "qwen"   # 对应 api_keys 中的 'qwen' 和 QwenProvider
+    aliases: ["qwen_plus_alias", "general_qwen_model"]
+  - name: "qwen-turbo" # 示例：通义千问 Turbo 模型
+    provider: "qwen"
+    aliases: ["qwen_turbo_alias"]
   # 可以添加更多模型，例如来自不同提供商的模型：
   # - name: "claude-3-opus-20240229"
   #   provider: "anthropic" # 需要在 api_keys 中定义 anthropic_api_key 并实现 AnthropicProvider

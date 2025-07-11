@@ -11,6 +11,7 @@
 *   `test_llm_gateway_retries.py`: LLM 网关重试机制相关的单元测试。
 *   `test_llm_gateway_responses.py`: LLM 网关获取文本和结构化响应（包括 Provider 交互和 Pydantic 验证）的单元测试。
 *   `test_gemini_provider.py`: (可选/如果需要) 针对 Gemini Provider 的特定单元测试（可能需要更复杂的模拟）。
+*   `test_qwen_provider.py`: 针对 Qwen Provider 的单元测试。
 
 ## 运行测试
 

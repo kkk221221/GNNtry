@@ -13,6 +13,7 @@
 *   `__init__.py`: Python 子包初始化文件。
 *   `base_provider.py`: 定义了 `BaseProvider` 抽象基类，所有具体的 LLM 提供商适配器都必须从此类继承。
 *   `gemini_provider.py`: 针对 Google Gemini 系列模型的提供商适配器实现。
+*   `qwen_provider.py`: 针对阿里云通义千问 (Qwen) 系列模型的提供商适配器实现 (基于 OpenAI 兼容模式)。
 *   `anthropic_provider.py` (示例/未来添加): 针对 Anthropic Claude 系列模型的提供商适配器实现。
 *   `openai_provider.py` (示例/未来添加): 针对 OpenAI GPT 系列模型的提供商适配器实现。
 
@@ -22,6 +23,11 @@
 - [x] 实现 `GeminiProvider` (`gemini_provider.py`)。
     - [x] 实现文本生成方法。
     - [x] 实现结构化数据生成支持（通过 prompt 工程）。
+    - [x] 实现错误处理和映射到网关的自定义异常。
+    - [x] 实现 token 计数 (从 API 响应获取); 成本估算 (基础数据已获取，完整估算待增强)。
+- [x] 实现 `QwenProvider` (`qwen_provider.py`)。
+    - [x] 实现文本生成方法 (基于 OpenAI 兼容模式)。
+    - [x] 实现结构化数据生成支持 (通过 OpenAI 兼容模式的 JSON 输出功能)。
     - [x] 实现错误处理和映射到网关的自定义异常。
     - [x] 实现 token 计数 (从 API 响应获取); 成本估算 (基础数据已获取，完整估算待增强)。
 - [ ] (可选) 为其他提供商（如 Anthropic, OpenAI）实现适配器。

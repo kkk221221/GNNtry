@@ -8,7 +8,7 @@ Provider 路由、API 调用重试、结构化输出验证和日志记录。
 
 from pydantic import BaseModel # type: ignore
 import pydantic # 用于 ValidationError
-from typing import Type, Dict, Any, Callable, Tuple, Optional # 增加了 Optional
+from typing import Type, Dict, Any, Callable, Tuple, Optional, List # 增加了 List
 import yaml
 import toml
 import os
@@ -18,7 +18,7 @@ import json # 用于结构化日志
 
 from .exceptions import LLMAPIError, LLMOutputValidationError, ConfigurationError, PromptTemplateError
 from .providers.base_provider import BaseProvider, ProviderResponse
-from .providers import GeminiProvider # 显式导入以备后用, 其他 provider 类似
+from .providers import GeminiProvider, QwenProvider # 显式导入以备后用
 
 # 获取模块级 logger 实例
 logger = logging.getLogger(__name__)
@@ -194,75 +194,65 @@ class LLMGateway:
         私有辅助方法：根据主配置文件中的 `api_keys` 和 `provider_specific_configs` 部分，
         初始化所有已配置且具有有效 API 密钥的 LLM Provider 实例。
 
-        目前硬编码支持 `GeminiProvider`。添加新的 Provider 时需要在此处扩展。
-
-        :return: 一个字典，键是 Provider 的唯一 ID (例如 "google")，值是对应的 Provider 实例。
+        :return: 一个字典，键是 Provider 的唯一 ID (例如 "google", "qwen")，值是对应的 Provider 实例。
         """
         providers: Dict[str, BaseProvider] = {}
         api_keys: Dict[str, Any] = self.config.get('api_keys', {})
         provider_specific_configs: Dict[str, Any] = self.config.get('provider_specific_configs', {})
 
-        # --- Google Gemini Provider 初始化逻辑 ---
-        gemini_provider_id = GeminiProvider.PROVIDER_ID # 通常是 "google"
+        # 定义支持的 Provider 类型及其初始化器
+        # 键是 Provider ID (与 config.yaml 中的 provider 字段对应),
+        # 值是对应的 Provider 类。
+        supported_provider_classes: Dict[str, Type[BaseProvider]] = {
+            GeminiProvider.PROVIDER_ID: GeminiProvider,
+            QwenProvider.PROVIDER_ID: QwenProvider,
+            # 在此添加其他 Provider, 例如:
+            # AnthropicProvider.PROVIDER_ID: AnthropicProvider,
+        }
 
-        # 检查 'api_keys' 部分是否包含此 provider_id 的条目
-        if gemini_provider_id in api_keys:
-            gemini_api_key = api_keys.get(gemini_provider_id) # 获取实际密钥值 (可能为 None)
+        for provider_id, provider_class in supported_provider_classes.items():
+            capitalized_id = provider_id.capitalize() # 用于日志
+            # 检查 'api_keys' 部分是否包含此 provider_id 的条目
+            if provider_id in api_keys:
+                api_key_value = api_keys.get(provider_id) # 获取实际密钥值 (可能为 None)
 
-            # 仅当 API 密钥存在且不为空时才尝试初始化 Provider
-            # (允许在配置中将密钥设为 None 来显式禁用 Provider)
-            if gemini_api_key:
-                try:
-                    # 获取特定于此 Provider 的配置 (例如，Gemini 的 safety_settings)
-                    gemini_specific_config = provider_specific_configs.get(gemini_provider_id, {})
-                    providers[gemini_provider_id] = GeminiProvider(
-                        api_key=gemini_api_key,
-                        provider_config=gemini_specific_config
+                # 仅当 API 密钥存在且不为空时才尝试初始化 Provider
+                # (允许在配置中将密钥设为 None 来显式禁用 Provider)
+                if api_key_value:
+                    try:
+                        # 获取特定于此 Provider 的配置
+                        specific_config = provider_specific_configs.get(provider_id, {})
+                        providers[provider_id] = provider_class(
+                            api_key=api_key_value,
+                            provider_config=specific_config
+                        )
+                        logger.info(f"{capitalized_id} Provider 初始化成功。")
+                    except LLMAPIError as e_api: # Provider 初始化时可能因无效密钥抛出
+                        logger.error(
+                            f"初始化 {capitalized_id} Provider 失败 (API 相关问题): {e_api}。"
+                            "请检查 API 密钥是否有效以及网络连接。"
+                        )
+                    except ConfigurationError as e_conf: # Provider 初始化时可能因库缺失等配置问题抛出
+                        logger.error(
+                            f"初始化 {capitalized_id} Provider 失败 (配置相关问题): {e_conf}。"
+                            "请确保相关依赖已安装且配置正确。"
+                        )
+                    except Exception as e_unknown: # pylint: disable=broad-except
+                        # 捕获其他所有未预料的异常
+                        logger.error(
+                            f"初始化 {capitalized_id} Provider 时发生未知错误: {e_unknown}",
+                            exc_info=True # 记录完整堆栈
+                        )
+                else: # api_keys 中有 provider_id 但其值为 None 或空
+                    logger.info(
+                        f"{capitalized_id} Provider 的 API 密钥未在配置中提供 (或为空)。"
+                        "该 Provider 将不会被初始化。"
                     )
-                    logger.info(f"{gemini_provider_id.capitalize()} Provider 初始化成功。")
-                except LLMAPIError as e_api: # Provider 初始化时可能因无效密钥抛出
-                    logger.error(
-                        f"初始化 {gemini_provider_id.capitalize()} Provider 失败 (API 相关问题): {e_api}。"
-                        "请检查 API 密钥是否有效以及网络连接。"
-                    )
-                except ConfigurationError as e_conf: # Provider 初始化时可能因库缺失等配置问题抛出
-                     logger.error(
-                        f"初始化 {gemini_provider_id.capitalize()} Provider 失败 (配置相关问题): {e_conf}。"
-                        "请确保相关依赖已安装且配置正确。"
-                    )
-                except Exception as e_unknown: # pylint: disable=broad-except
-                    # 捕获其他所有未预料的异常
-                    logger.error(
-                        f"初始化 {gemini_provider_id.capitalize()} Provider 时发生未知错误: {e_unknown}",
-                        exc_info=True # 记录完整堆栈
-                    )
-            else: # api_keys 中有 gemini_provider_id 但其值为 None 或空
+            else: # api_keys 中完全没有 provider_id 条目
                 logger.info(
-                    f"{gemini_provider_id.capitalize()} Provider 的 API 密钥未在配置中提供 (或为空)。"
-                    "该 Provider 将不会被初始化。"
+                    f"配置文件中未包含针对 '{provider_id}' Provider 的 API 密钥配置。"
+                    f"如果需要使用此 Provider，请在 'api_keys' 部分添加 '{provider_id}' 条目。"
                 )
-        else: # api_keys 中完全没有 gemini_provider_id 条目
-            logger.info(
-                f"配置文件中未包含针对 '{gemini_provider_id}' Provider 的 API 密钥配置。"
-                "如果需要使用此 Provider，请在 'api_keys' 部分添加相关条目。"
-            )
-
-        # --- 其他 Provider 初始化逻辑 (未来扩展点) ---
-        # 例如，为 Anthropic Claude 添加初始化:
-        # anthropic_provider_id = "anthropic" # 假设 AnthropicProvider.PROVIDER_ID
-        # if anthropic_provider_id in api_keys:
-        #     anthropic_api_key = api_keys.get(anthropic_provider_id)
-        #     if anthropic_api_key:
-        #         try:
-        #             # from .providers import AnthropicProvider # 确保已导入
-        #             # anthropic_config = provider_specific_configs.get(anthropic_provider_id, {})
-        #             # providers[anthropic_provider_id] = AnthropicProvider(api_key=anthropic_api_key, provider_config=anthropic_config)
-        #             # logger.info(f"{anthropic_provider_id.capitalize()} Provider 初始化成功。")
-        #             pass # 占位
-        #         except Exception as e: # ... 类似的错误处理 ...
-        #             logger.error(f"初始化 {anthropic_provider_id.capitalize()} Provider 失败: {e}")
-        #     # ... else 日志 ...
-        # # ... else 日志 ...
 
         if not providers: # 如果没有任何 Provider 成功初始化
             logger.warning(
