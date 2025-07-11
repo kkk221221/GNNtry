@@ -1,0 +1,44 @@
+# -*- coding: utf-8 -*-
+# LLM 网关的 Prompt 模板文件
+# 使用 TOML 格式定义
+
+[propose_strategy]
+# 模板: 将科研问题转化为 NCBI GEO 数据库的搜索关键词。
+# 变量: user_query (用户提出的原始问题)
+# 输出期望: JSON 格式，包含 'pubmed_query' 和 'analysis_type' 字段。
+template = """
+将以下科研问题转化为NCBI GEO数据库的搜索关键词。
+问题: "{user_query}"
+请以JSON格式返回，包含'pubmed_query'和'analysis_type'字段。
+"""
+
+[generate_samplesheet]
+# 模板: 为 Nextflow RNA-Seq 流程创建 Samplesheet CSV。
+# 变量: file_list (以特定格式描述的文件列表字符串)
+# 输出期望: 纯 CSV 文本。
+template = """
+我正在使用Nextflow流程'nf-core/rnaseq'。请为我创建一个samplesheet.csv。
+必需的列是'sample', 'fastq_1', 'fastq_2', 'strandedness'。
+'strandedness'列可设为'auto'。
+我的文件列表如下：
+{file_list}
+请仅输出CSV格式的原始文本。
+"""
+
+[example_summarize_text]
+# 模板: 总结提供的文本。
+# 变量: text_to_summarize (需要总结的文本内容)
+# 输出期望: 总结后的文本。
+template = """
+请总结以下文本：
+"{text_to_summarize}"
+"""
+
+[example_translation]
+# 模板: 将文本翻译成指定语言。
+# 变量: text_to_translate (需要翻译的文本), target_language (目标语言，例如：中文、English)
+# 输出期望: 翻译后的文本。
+template = """
+请将以下文本翻译成{target_language}:
+"{text_to_translate}"
+"""

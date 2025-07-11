@@ -1,0 +1,58 @@
+# LLM 网关配置文件 (YAML 格式)
+
+# API 密钥配置
+# 格式: provider_name: "env:ENVIRONMENT_VARIABLE_NAME"
+# "env:" 前缀表示从指定的环境变量中加载密钥。
+# 如果直接提供密钥字符串（不推荐用于生产），请确保文件权限安全。
+api_keys:
+  google_gemini: "env:GEMINI_API_KEY" # 将从环境变量 GEMINI_API_KEY 加载
+
+# 模型定义
+# 每个模型条目应包含:
+#   name: 模型的具体名称 (例如 'gemini-1.5-pro-latest')
+#   provider: 此模型所属的提供商的标识符 (例如 'google')
+#   aliases: 一个逻辑别名列表，业务代码将使用这些别名来调用模型。
+#            例如 "smart_model", "fast_model", "default_translation_model"。
+#            别名在整个配置中应该是唯一的。
+models:
+  - name: "gemini-1.5-pro" # 假设这是 Google Gemini Pro 模型的标识符
+    provider: "google" # 对应 api_keys 中的 'google_gemini' 和 providers 实现
+    aliases: ["smart_model", "default"] # "default" 可以用作未指定别名时的默认选择
+  - name: "gemini-1.5-flash" # 假设这是 Google Gemini Flash 模型的标识符
+    provider: "google"
+    aliases: ["fast_model"]
+  # 可以添加更多模型，例如来自不同提供商的模型：
+  # - name: "claude-3-opus-20240229"
+  #   provider: "anthropic" # 需要在 api_keys 中定义 anthropic_api_key 并实现 AnthropicProvider
+  #   aliases: ["advanced_reasoning_model"]
+
+# 重试策略配置
+# 定义 API 调用失败时的自动重试行为。
+retry_policy:
+  max_retries: 3        # 最大重试次数 (不包括初次尝试)
+  backoff_factor: 2     # 指数退避因子。每次重试的等待时间 = backoff_factor * (2 ** (attempt_number - 1))
+                        # 例如，factor 为 2: 第一次重试等2s, 第二次等4s, 第三次等8s (如果基础等待时间为1s)
+  initial_wait_seconds: 1 # 首次重试前的基础等待时间（秒）
+  max_wait_seconds: 60    # 任何单次重试等待时间的最大上限（秒）
+
+# 日志配置 (可选，也可以在应用层面配置)
+# logging:
+#   level: "INFO" # 日志级别 (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+#   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+#   log_file_path: "logs/llm_gateway.log" # 如果需要记录到文件
+#   max_prompt_log_length: 200 # 日志中记录的 prompt 内容的最大长度（用于截断）
+
+# 成本估算配置 (如果提供商API支持，或者基于已知费率)
+# cost_estimation:
+#   enabled: true
+#   currency: "USD"
+#   models_cost_rates: # 定义每个模型的输入和输出 token 成本
+#     "gemini-1.5-pro":
+#       input_token_cost: 0.000007  # 假设每输入 token 0.000007 USD
+#       output_token_cost: 0.000021 # 假设每输出 token 0.000021 USD
+#     "gemini-1.5-flash":
+#       input_token_cost: 0.0000007
+#       output_token_cost: 0.0000021
+#     # ... 其他模型费率
+#   # 如果无法获取 token 数量，可以定义每次调用的固定成本估算
+#   default_call_cost: 0.001 # 无法计算 token 时使用的默认成本估算
