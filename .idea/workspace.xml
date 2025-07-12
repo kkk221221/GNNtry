@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="61cf5559-af08-4ccd-b620-5e3f98fefa99" name="更改" comment="">
+      <change beforePath="$PROJECT_DIR$/aibiowflow/module_1_strategy/service.py" beforeDir="false" afterPath="$PROJECT_DIR$/aibiowflow/module_1_strategy/service.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/aibiowflow/tests/module_1_strategy/test_strategy_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/aibiowflow/tests/module_1_strategy/test_strategy_service.py" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="ProjectErrors" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 8
+}</component>
+  <component name="ProjectId" id="2zjSdQXm6ShhOaMqW91OcdjlBry" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Python 测试.Python 测试 (test_llm_gateway_config.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.Python 测试 (test_llm_gateway_prompts.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.Python 测试 (test_llm_gateway_responses.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.Python 测试 (test_qwen_provider.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.Python 测试 (test_strategy_service.py 内).executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_llm_gateway_config.TestConfigLoading 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_llm_gateway_config.TestConfigLoading.test_missing_config_file 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_llm_gateway_prompts.TestPromptFormatting 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_llm_gateway_retries.TestRetryMechanism 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_llm_gateway_routing.TestModelRouting 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_ncbi_client.TestNCBIClient 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_ncbi_client.TestNCBIClient.test_search_geo_no_results 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_qwen_provider.TestQwenProvider.test_initialization_openai_not_installed 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_qwen_provider.TestQwenProviderIntegration.test_generate_text_qwen_max_if_available 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_strategy_service.TestStrategyService 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_strategy_service.TestStrategyService.test_cache_different_queries_no_collision 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_strategy_service.TestStrategyService.test_filter_match_experiment_keywords 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python 测试.test_strategy_service.TestStrategyService.test_filter_no_keywords_defined 的 Python 测试.executor&quot;: &quot;Run&quot;,
+    &quot;Python.qwen_provider.executor&quot;: &quot;Run&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;feat/module-1-strategy-tests&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;run.code.analysis.last.selected.profile&quot;: &quot;pProject Default&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunManager" selected="Python 测试.Python 测试 (test_strategy_service.py 内)">
+    <configuration name="Python 测试 (test_strategy_service.py 内)" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="GNNtry" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/aibiowflow/tests/module_1_strategy" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;$PROJECT_DIR$/aibiowflow/tests/module_1_strategy/test_strategy_service.py&quot;" />
+      <option name="_new_targetType" value="&quot;PATH&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_ncbi_client.TestNCBIClient 的 Python 测试" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="GNNtry" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/aibiowflow/tests/module_1_strategy" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_ncbi_client.TestNCBIClient&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_ncbi_client.TestNCBIClient.test_search_geo_no_results 的 Python 测试" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="GNNtry" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/aibiowflow/tests/module_1_strategy" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_ncbi_client.TestNCBIClient.test_search_geo_no_results&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_strategy_service.TestStrategyService.test_cache_different_queries_no_collision 的 Python 测试" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="GNNtry" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/aibiowflow/tests/module_1_strategy" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_strategy_service.TestStrategyService.test_cache_different_queries_no_collision&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test_strategy_service.TestStrategyService.test_filter_no_keywords_defined 的 Python 测试" type="tests" factoryName="Autodetect" temporary="true" nameIsGenerated="true">
+      <module name="GNNtry" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/aibiowflow/tests/module_1_strategy" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <EXTENSION ID="PythonCoverageRunConfigurationExtension" runner="coverage.py" />
+      <option name="_new_additionalArguments" value="&quot;&quot;" />
+      <option name="_new_target" value="&quot;test_strategy_service.TestStrategyService.test_filter_no_keywords_defined&quot;" />
+      <option name="_new_targetType" value="&quot;PYTHON&quot;" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python 测试.Python 测试 (test_strategy_service.py 内)" />
+        <item itemvalue="Python 测试.test_ncbi_client.TestNCBIClient.test_search_geo_no_results 的 Python 测试" />
+        <item itemvalue="Python 测试.test_strategy_service.TestStrategyService.test_cache_different_queries_no_collision 的 Python 测试" />
+        <item itemvalue="Python 测试.test_ncbi_client.TestNCBIClient 的 Python 测试" />
+        <item itemvalue="Python 测试.test_strategy_service.TestStrategyService.test_filter_no_keywords_defined 的 Python 测试" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-js-predefined-d6986cc7102b-5c90d61e3bab-JavaScript-PY-242.23339.19" />
+        <option value="bundled-python-sdk-0029f7779945-399fe30bd8c1-com.jetbrains.pycharm.pro.sharedIndexes.bundled-PY-242.23339.19" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="应用程序级" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="默认任务">
+      <changelist id="61cf5559-af08-4ccd-b620-5e3f98fefa99" name="更改" comment="" />
+      <created>1752243076020</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1752243076020</updated>
+      <workItem from="1752243077533" duration="5148000" />
+      <workItem from="1752248652813" duration="12209000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/GNNtry$qwen_provider.coverage" NAME="qwen_provider 覆盖结果" MODIFIED="1752247349174" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/aibiowflow/llm_gateway/providers" />
+    <SUITE FILE_PATH="coverage/test_qwen_provider_py$.coverage" NAME=" 覆盖结果" MODIFIED="1752293355090" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/aibiowflow/tests/module_1_strategy" />
+    <SUITE FILE_PATH="coverage/test_qwen_provider_py$qwen_provider.coverage" NAME="qwen_provider 覆盖结果" MODIFIED="1752286080775" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/aibiowflow/llm_gateway/providers" />
+    <SUITE FILE_PATH="coverage/GNNtry$.coverage" NAME=" 覆盖结果" MODIFIED="1752248373819" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="coverage.py" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="false" WORKING_DIRECTORY="$PROJECT_DIR$/aibiowflow/tests" />
+  </component>
+</project>
