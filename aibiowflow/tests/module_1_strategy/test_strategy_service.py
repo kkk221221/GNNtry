@@ -326,6 +326,451 @@ class TestStrategyService(unittest.TestCase):
     # - Different heuristic filtering outcomes.
     # - Edge cases for input data.
 
+    # --- Tests for Heuristic Filtering Logic ---
+
+    def _run_filter_test(self, service_config_override, input_metadata, expected_passing_gse_ids):
+        """
+        Helper to test filtering logic by providing specific service config
+        and input metadata, then checking which GSE IDs pass.
+        """
+        config = {**self.sample_module_config, **service_config_override}
+
+        # Patch NCBIClient instantiation within a specific service instance for this test
+        with patch('aibiowflow.module_1_strategy.service.NCBIClient') as MockNCBIClientClass:
+            mock_ncbi_instance = MockNCBIClientClass.return_value
+            strategy_service = StrategyService(
+                module_config=config,
+                llm_gateway=self.mock_llm_gateway,
+                ncbi_api_key=config.get("ncbi_api_key")
+            )
+
+            # Mock the preceding steps to isolate filtering
+            self.mock_llm_gateway.get_structured_response.return_value = self.mock_query_intent
+            self.mock_llm_gateway.get_text_response.return_value = "any_search_query"
+            mock_ncbi_instance.search_geo.return_value = [item['gse_id'] for item in input_metadata] # Dummy IDs
+            mock_ncbi_instance.get_geo_summaries.return_value = input_metadata
+
+            # Mock the LLM call for candidate analysis to avoid errors after filtering
+            # It should receive only the candidates that passed heuristic filtering
+            def mock_llm_analysis(user_query, candidates_metadata_for_llm):
+                # This is where we can assert what `_filter_candidates` produced
+                passing_gse_ids = [cand['gse_id'] for cand in candidates_metadata_for_llm]
+                self.assertCountEqual(passing_gse_ids, expected_passing_gse_ids,
+                                     "GSE IDs passed to LLM analysis do not match expected.")
+
+                # Return minimal valid data to allow proposal creation to complete
+                return [DatasetCandidate(gse_id=gid, srp_id="SRP_MOCK", title="Mock", summary="Mock",
+                                         species=["Homo sapiens"], sample_count=10,
+                                         llm_recommendation_reason="Mock", rank_score=1.0)
+                        for gid in passing_gse_ids]
+
+            self.mock_llm_gateway.get_structured_response.side_effect = [
+                 self.mock_query_intent, # For _interpret_user_query
+                 mock_llm_analysis       # For _analyze_candidates_with_llm
+            ]
+
+
+            if not expected_passing_gse_ids:
+                with self.assertRaises(NoDataFoundError):
+                    strategy_service.create_proposal_from_query(self.sample_user_query)
+            else:
+                proposal = strategy_service.create_proposal_from_query(self.sample_user_query)
+                self.assertCountEqual([cand.gse_id for cand in proposal.top_candidates], expected_passing_gse_ids)
+
+
+    def test_filter_allowed_species(self):
+        """Test species filtering."""
+        config_override = {"heuristic_filtering": {"allowed_species": ["Homo sapiens"], "min_sample_count": 1, "require_srp_id": False}}
+        metadata = [
+            {"gse_id": "GSE1", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S1"},
+            {"gse_id": "GSE2", "species": ["Mus musculus"], "sample_count": 5, "srp_id": "S2"}, # Filtered out
+            {"gse_id": "GSE3", "species": ["Homo sapiens", "Mus musculus"], "sample_count": 5, "srp_id": "S3"}, # Passes
+        ]
+        self._run_filter_test(config_override, metadata, ["GSE1", "GSE3"])
+
+    def test_filter_min_sample_count(self):
+        """Test minimum sample count filtering."""
+        config_override = {"heuristic_filtering": {"allowed_species": ["Homo sapiens"], "min_sample_count": 10, "require_srp_id": False}}
+        metadata = [
+            {"gse_id": "GSE1", "species": ["Homo sapiens"], "sample_count": 12, "srp_id": "S1"},
+            {"gse_id": "GSE2", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S2"}, # Filtered out
+            {"gse_id": "GSE3", "species": ["Homo sapiens"], "sample_count": 10, "srp_id": "S3"},
+        ]
+        self._run_filter_test(config_override, metadata, ["GSE1", "GSE3"])
+
+    def test_filter_require_srp_id(self):
+        """Test SRP ID requirement filtering."""
+        config_override = {"heuristic_filtering": {"allowed_species": ["Homo sapiens"], "min_sample_count": 1, "require_srp_id": True}}
+        metadata = [
+            {"gse_id": "GSE1", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S1"},
+            {"gse_id": "GSE2", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": None}, # Filtered out
+            {"gse_id": "GSE3", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": ""},   # Filtered out (empty string)
+        ]
+        self._run_filter_test(config_override, metadata, ["GSE1"])
+
+    def test_filter_match_experiment_keywords(self):
+        """Test experiment type keyword matching."""
+        config_override = {
+            "heuristic_filtering": {
+                "allowed_species": ["Homo sapiens"], "min_sample_count": 1, "require_srp_id": False,
+                "match_experiment_type_keywords": ["RNA-seq", "transcriptome"]
+            }
+        }
+        metadata = [
+            {"gse_id": "GSE1", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S1", "title": "Study of RNA-seq in cancer", "summary": ""},
+            {"gse_id": "GSE2", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S2", "title": "Proteomics study", "summary": "Whole transcriptome analysis"},
+            {"gse_id": "GSE3", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S3", "title": "Methylation patterns", "summary": "No keywords here"}, # Filtered
+        ]
+        self._run_filter_test(config_override, metadata, ["GSE1", "GSE2"])
+
+    def test_filter_no_keywords_defined(self):
+        """Test filtering when no experiment keywords are defined (should pass all)."""
+        config_override = {
+            "heuristic_filtering": {
+                "allowed_species": ["Homo sapiens"], "min_sample_count": 1, "require_srp_id": False,
+                "match_experiment_type_keywords": [] # Empty list
+            }
+        }
+        metadata = [
+            {"gse_id": "GSE1", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S1", "title": "Study of RNA-seq in cancer", "summary": ""},
+            {"gse_id": "GSE2", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S2", "title": "Proteomics study", "summary": "Whole transcriptome analysis"},
+            {"gse_id": "GSE3", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S3", "title": "Methylation patterns", "summary": "No keywords here"},
+        ]
+        # All should pass keyword filter because no keywords are specified for matching
+        self._run_filter_test(config_override, metadata, ["GSE1", "GSE2", "GSE3"])
+
+
+    def test_filter_all_rules_combined(self):
+        """Test combination of all filtering rules."""
+        config_override = {
+            "heuristic_filtering": {
+                "allowed_species": ["Homo sapiens"],
+                "min_sample_count": 10,
+                "require_srp_id": True,
+                "match_experiment_type_keywords": ["RNA-seq"]
+            }
+        }
+        metadata = [
+            # Passes all
+            {"gse_id": "GSE_PASS", "species": ["Homo sapiens"], "sample_count": 12, "srp_id": "SRP_PASS", "title": "Human RNA-seq study", "summary": ""},
+            # Fails species
+            {"gse_id": "GSE_FAIL_SPECIES", "species": ["Mus musculus"], "sample_count": 12, "srp_id": "SRP1", "title": "Mouse RNA-seq", "summary": ""},
+            # Fails sample count
+            {"gse_id": "GSE_FAIL_SAMPLES", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "SRP2", "title": "Human RNA-seq low N", "summary": ""},
+            # Fails SRP ID
+            {"gse_id": "GSE_FAIL_SRP", "species": ["Homo sapiens"], "sample_count": 12, "srp_id": None, "title": "Human RNA-seq no SRA", "summary": ""},
+            # Fails keyword
+            {"gse_id": "GSE_FAIL_KEYWORD", "species": ["Homo sapiens"], "sample_count": 12, "srp_id": "SRP4", "title": "Human ChIP-seq study", "summary": ""},
+        ]
+        self._run_filter_test(config_override, metadata, ["GSE_PASS"])
+
+    def test_filter_empty_metadata_input(self):
+        """Test filtering with an empty list of metadata."""
+        config_override = self.sample_module_config # Use default filters
+        metadata = []
+        # Expect NoDataFoundError before LLM analysis is even attempted if filtering results in empty
+        # The _run_filter_test will assert NoDataFoundError if expected_passing_gse_ids is empty
+        self._run_filter_test(config_override, metadata, [])
+
+    # --- Tests for LLM Interactions & Error Handling ---
+
+    def test_interpret_query_llm_output_validation_error(self):
+        """Test LLMOutputValidationError during query interpretation."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        self.mock_llm_gateway.get_structured_response.side_effect = LLMOutputValidationError("Invalid QueryIntent format")
+
+        with self.assertRaisesRegex(StrategyCreationError, "Failed to interpret user query via LLM.*Invalid QueryIntent format"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+        self.mock_llm_gateway.get_structured_response.assert_called_once_with(
+            prompt_name="interpret_query", context={"user_query": self.sample_user_query}, output_schema=QueryIntent
+        )
+
+    def test_interpret_query_llm_api_error(self):
+        """Test LLMAPIError during query interpretation."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        self.mock_llm_gateway.get_structured_response.side_effect = LLMAPIError("LLM API down", status_code=503)
+
+        with self.assertRaisesRegex(StrategyCreationError, "Failed to interpret user query via LLM.*LLM API down"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+
+    def test_interpret_query_llm_prompt_template_error(self):
+        """Test PromptTemplateError during query interpretation."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        self.mock_llm_gateway.get_structured_response.side_effect = PromptTemplateError("Missing var in prompt")
+
+        with self.assertRaisesRegex(StrategyCreationError, "Failed to interpret user query via LLM.*Missing var in prompt"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+
+    def test_translate_intent_llm_text_response_error(self):
+        """Test LLM error during intent to search query translation."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        self.mock_llm_gateway.get_structured_response.return_value = self.mock_query_intent # Step 1 success
+        self.mock_llm_gateway.get_text_response.side_effect = LLMAPIError("LLM API for text failed")
+
+        with self.assertRaisesRegex(StrategyCreationError, "Failed to translate intent to search query via LLM.*LLM API for text failed"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+        self.mock_llm_gateway.get_text_response.assert_called_once_with(
+             prompt_name="translate_to_search", context={"intent_json": self.mock_query_intent.model_dump_json()}
+        )
+
+    def test_translate_intent_llm_returns_empty_string(self):
+        """Test when LLM returns an empty string for search query translation."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        self.mock_llm_gateway.get_structured_response.return_value = self.mock_query_intent # Step 1 success
+        self.mock_llm_gateway.get_text_response.return_value = "" # Empty string
+
+        with self.assertRaisesRegex(StrategyCreationError, "LLM did not return a valid search string"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+
+
+    def test_analyze_candidates_llm_output_validation_error(self):
+        """Test LLMOutputValidationError during candidate analysis."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        # Setup mocks for successful steps before candidate analysis
+        self.mock_llm_gateway.get_structured_response.return_value = self.mock_query_intent # step 1
+        self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string # step 2
+        self.mock_ncbi_client_instance.search_geo.return_value = self.mock_gse_ids # step 3
+        # Provide one valid candidate that passes heuristic filtering (default config)
+        passing_candidate_metadata = [self.mock_gse_metadata_list[0]] # GSE123 - Homo sapiens, 10 samples, SRP111, RNA-seq title
+        self.mock_ncbi_client_instance.get_geo_summaries.return_value = passing_candidate_metadata # step 4 (after filtering, this is what's passed)
+
+        # Configure the second call to get_structured_response (for analyze_candidates) to fail
+        self.mock_llm_gateway.get_structured_response.side_effect = [
+            self.mock_query_intent,
+            LLMOutputValidationError("Invalid DatasetCandidate list")
+        ]
+
+        with self.assertRaisesRegex(StrategyCreationError, "Failed to analyze candidates via LLM.*Invalid DatasetCandidate list"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+
+        # Check that interpret_query was called
+        self.mock_llm_gateway.get_structured_response.assert_any_call(
+            prompt_name="interpret_query", context={"user_query": self.sample_user_query}, output_schema=QueryIntent
+        )
+        # Check that analyze_candidates was called (and was the one that raised the error)
+        # The context for analyze_candidates would be the JSON string of passing_candidate_metadata
+        # For simplicity, we check ANY context here, knowing the error came from this call.
+        self.mock_llm_gateway.get_structured_response.assert_any_call(
+            prompt_name="analyze_candidates", context=unittest.mock.ANY, output_schema=List[DatasetCandidate]
+        )
+
+    def test_analyze_candidates_llm_api_error(self):
+        """Test LLMAPIError during candidate analysis."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        self.mock_llm_gateway.get_structured_response.side_effect = [
+            self.mock_query_intent,
+            LLMAPIError("Analyze API down")
+        ]
+        self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string
+        self.mock_ncbi_client_instance.search_geo.return_value = self.mock_gse_ids
+        self.mock_ncbi_client_instance.get_geo_summaries.return_value = [self.mock_gse_metadata_list[0]]
+
+
+        with self.assertRaisesRegex(StrategyCreationError, "Failed to analyze candidates via LLM.*Analyze API down"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+
+    def test_analyze_candidates_llm_returns_non_list(self):
+        """Test when LLM returns a single object instead of a list for analyze_candidates."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        single_candidate = DatasetCandidate(gse_id="GSE_SINGLE", srp_id="SRP_S", title="T", summary="S", species=["H.sapiens"], sample_count=10, llm_recommendation_reason="R", rank_score=8)
+
+        self.mock_llm_gateway.get_structured_response.side_effect = [
+            self.mock_query_intent,
+            single_candidate # LLM returns a single object, not a list
+        ]
+        self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string
+        self.mock_ncbi_client_instance.search_geo.return_value = ["GSE_SINGLE"]
+        self.mock_ncbi_client_instance.get_geo_summaries.return_value = [{"gse_id": "GSE_SINGLE", "srp_id": "SRP_S", "title": "T", "summary": "S", "species": ["H.sapiens"], "sample_count": 10}]
+
+        # The service currently wraps a single DatasetCandidate in a list if returned by LLM.
+        proposal = strategy_service.create_proposal_from_query(self.sample_user_query)
+        self.assertEqual(len(proposal.top_candidates), 1)
+        self.assertEqual(proposal.top_candidates[0].gse_id, "GSE_SINGLE")
+
+    def test_analyze_candidates_llm_returns_list_with_wrong_items(self):
+        """Test when LLM returns a list with non-DatasetCandidate items for analyze_candidates."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+
+        self.mock_llm_gateway.get_structured_response.side_effect = [
+            self.mock_query_intent,
+            [{"gse_id": "GSE_DICT"}] # List of dicts, not DatasetCandidate objects
+        ]
+        self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string
+        self.mock_ncbi_client_instance.search_geo.return_value = ["GSE_DICT"]
+        self.mock_ncbi_client_instance.get_geo_summaries.return_value = [{"gse_id": "GSE_DICT", "srp_id": "SRP_D", "title": "T", "summary": "S", "species": ["H.sapiens"], "sample_count": 10}]
+
+        # This should be caught by Pydantic validation in LLMGateway or by the service's check.
+        # Current service code: `if not isinstance(ranked_candidate_list, list) or not all(isinstance(item, DatasetCandidate) for item in ranked_candidate_list):`
+        with self.assertRaisesRegex(StrategyCreationError, "LLM did not return a valid list of DatasetCandidate objects"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+
+    def test_ncbi_client_search_geo_api_error(self):
+        """Test NCBIAPIError during ncbi_client.search_geo."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        self.mock_llm_gateway.get_structured_response.return_value = self.mock_query_intent
+        self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string
+        self.mock_ncbi_client_instance.search_geo.side_effect = NCBIAPIError("NCBI ESearch down", status_code=500)
+
+        with self.assertRaisesRegex(StrategyCreationError, "NCBI API interaction failed.*NCBI ESearch down"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+
+    def test_ncbi_client_get_summaries_api_error(self):
+        """Test NCBIAPIError during ncbi_client.get_geo_summaries."""
+        strategy_service = self._create_service_with_mocked_ncbi()
+        self.mock_llm_gateway.get_structured_response.return_value = self.mock_query_intent
+        self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string
+        self.mock_ncbi_client_instance.search_geo.return_value = self.mock_gse_ids # Search succeeds
+        self.mock_ncbi_client_instance.get_geo_summaries.side_effect = NCBIAPIError("NCBI ESummary down", status_code=503)
+
+        with self.assertRaisesRegex(StrategyCreationError, "NCBI API interaction failed.*NCBI ESummary down"):
+            strategy_service.create_proposal_from_query(self.sample_user_query)
+
+    # --- Tests for Configuration Impact & Cache ---
+
+    def test_config_impact_heuristic_rules_species(self):
+        """Test that changing 'allowed_species' in config affects filtering."""
+        # Original config in setUp allows "Homo sapiens", "Mus musculus"
+        # Test with a more restrictive species list
+        config_override = {
+            "heuristic_filtering": {
+                "allowed_species": ["Mus musculus"], # Only Mus musculus
+                "min_sample_count": 1, # Keep other rules permissive
+                "require_srp_id": False,
+                "match_experiment_type_keywords": []
+            }
+        }
+        metadata = [
+            {"gse_id": "GSE_HS", "species": ["Homo sapiens"], "sample_count": 5, "srp_id": "S1", "title":"HS study"},
+            {"gse_id": "GSE_MM", "species": ["Mus musculus"], "sample_count": 5, "srp_id": "S2", "title":"MM study"},
+            {"gse_id": "GSE_BOTH", "species": ["Homo sapiens", "Mus musculus"], "sample_count": 5, "srp_id": "S3", "title":"Both study"},
+        ]
+        # Expected: GSE_MM and GSE_BOTH should pass as they include Mus musculus
+        self._run_filter_test(config_override, metadata, ["GSE_MM", "GSE_BOTH"])
+
+    def test_config_impact_heuristic_rules_min_samples(self):
+        """Test that changing 'min_sample_count' in config affects filtering."""
+        config_override = {
+            "heuristic_filtering": {
+                "allowed_species": ["Homo sapiens", "Mus musculus"],
+                "min_sample_count": 20, # Higher sample count
+                "require_srp_id": False,
+                "match_experiment_type_keywords": []
+            }
+        }
+        metadata = [
+            {"gse_id": "GSE_LOW_N", "species": ["Homo sapiens"], "sample_count": 10, "srp_id": "S1", "title":"Low N"},
+            {"gse_id": "GSE_HIGH_N", "species": ["Mus musculus"], "sample_count": 25, "srp_id": "S2", "title":"High N"},
+            {"gse_id": "GSE_EQ_N", "species": ["Homo sapiens"], "sample_count": 20, "srp_id": "S3", "title":"Equal N"},
+        ]
+        self._run_filter_test(config_override, metadata, ["GSE_HIGH_N", "GSE_EQ_N"])
+
+    def test_config_impact_cache_ttl(self):
+        """Test that 'cache_ttl_seconds' in config affects cache expiry."""
+        # This test is similar to test_cache_expiry but explicitly sets TTL via config
+        # to ensure the service reads it correctly.
+
+        # Create a service instance with a very short TTL via config
+        short_ttl_config = self.sample_module_config.copy()
+        short_ttl_config['cache_ttl_seconds'] = 0.05 # Very short
+
+        # Patch NCBIClient for this specific test scenario
+        with patch('aibiowflow.module_1_strategy.service.NCBIClient') as MockNCBIClientClass_TTLTest:
+            mock_ncbi_instance_ttl = MockNCBIClientClass_TTLTest.return_value
+
+            strategy_service_short_ttl = StrategyService(
+                module_config=short_ttl_config,
+                llm_gateway=self.mock_llm_gateway,
+                ncbi_api_key=short_ttl_config.get("ncbi_api_key")
+            )
+
+            # --- First call (populates cache) ---
+            # Reset and re-configure mocks for the first call
+            self.mock_llm_gateway.reset_mock()
+            self.mock_llm_gateway.get_structured_response.side_effect = [
+                self.mock_query_intent, self.mock_ranked_candidates
+            ]
+            self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string
+            mock_ncbi_instance_ttl.search_geo.return_value = self.mock_gse_ids
+            mock_ncbi_instance_ttl.get_geo_summaries.return_value = [self.mock_gse_metadata_list[0], self.mock_gse_metadata_list[1]]
+
+            proposal1 = strategy_service_short_ttl.create_proposal_from_query(self.sample_user_query + "_ttl_test") # Unique query
+            self.assertIsNotNone(proposal1)
+
+            # Verify mocks were called for the first proposal
+            self.mock_llm_gateway.get_structured_response.assert_any_call(prompt_name="interpret_query", context=unittest.mock.ANY, output_schema=QueryIntent)
+            self.mock_llm_gateway.get_text_response.assert_called_once()
+            mock_ncbi_instance_ttl.search_geo.assert_called_once()
+            mock_ncbi_instance_ttl.get_geo_summaries.assert_called_once()
+
+            # Wait for cache to expire (longer than the 0.05s TTL)
+            time.sleep(0.1)
+
+            # --- Second call (should recalculate due to short TTL from config) ---
+            # Reset and re-configure mocks for the second call
+            self.mock_llm_gateway.reset_mock() # Reset all mock call counts etc.
+            mock_ncbi_instance_ttl.reset_mock()
+
+            self.mock_llm_gateway.get_structured_response.side_effect = [
+                self.mock_query_intent, # For interpret_query
+                self.mock_ranked_candidates # For analyze_candidates
+            ]
+            self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string + "_recalc" # Ensure different if needed
+            mock_ncbi_instance_ttl.search_geo.return_value = self.mock_gse_ids # Can be same
+            mock_ncbi_instance_ttl.get_geo_summaries.return_value = [self.mock_gse_metadata_list[0]] # Slightly different to ensure new obj
+
+            proposal2 = strategy_service_short_ttl.create_proposal_from_query(self.sample_user_query + "_ttl_test") # Same unique query
+            self.assertIsNotNone(proposal2)
+            self.assertNotEqual(proposal1.proposal_id, proposal2.proposal_id, "Proposal ID should be different after cache expiry and recalc.")
+            # If data changed, we can assert that too:
+            self.assertEqual(len(proposal2.top_candidates), 1, "Recalculated proposal should have different data if mock changed.")
+
+            # Verify mocks were called again for the second proposal
+            self.mock_llm_gateway.get_structured_response.assert_any_call(prompt_name="interpret_query", context=unittest.mock.ANY, output_schema=QueryIntent)
+            self.mock_llm_gateway.get_text_response.assert_called_once()
+            mock_ncbi_instance_ttl.search_geo.assert_called_once()
+            mock_ncbi_instance_ttl.get_geo_summaries.assert_called_once()
+
+    def test_cache_different_queries_no_collision(self):
+        """Test that different queries result in different cache entries."""
+        strategy_service = self._create_service_with_mocked_ncbi() # Uses default TTL
+
+        query1 = self.sample_user_query + " (Query 1)"
+        query2 = self.sample_user_query + " (Query 2)"
+
+        # --- Call for Query 1 ---
+        self.mock_llm_gateway.get_structured_response.side_effect = [self.mock_query_intent, self.mock_ranked_candidates]
+        self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string
+        self.mock_ncbi_client_instance.search_geo.return_value = self.mock_gse_ids
+        self.mock_ncbi_client_instance.get_geo_summaries.return_value = [self.mock_gse_metadata_list[0]]
+
+        proposal1 = strategy_service.create_proposal_from_query(query1)
+        call_count_interpret1 = self.mock_llm_gateway.get_structured_response.call_count
+        call_count_text1 = self.mock_llm_gateway.get_text_response.call_count
+        call_count_search1 = self.mock_ncbi_client_instance.search_geo.call_count
+        call_count_summary1 = self.mock_ncbi_client_instance.get_geo_summaries.call_count
+
+
+        # --- Call for Query 2 (should not hit cache from Query 1) ---
+        # Modify mock_ranked_candidates slightly for proposal2 to be different if needed
+        mock_ranked_candidates_q2 = self.mock_ranked_candidates[:1]
+        self.mock_llm_gateway.get_structured_response.side_effect = [self.mock_query_intent, mock_ranked_candidates_q2]
+        self.mock_llm_gateway.get_text_response.return_value = self.mock_geo_search_string + "_q2"
+        self.mock_ncbi_client_instance.search_geo.return_value = self.mock_gse_ids[:1]
+        self.mock_ncbi_client_instance.get_geo_summaries.return_value = [self.mock_gse_metadata_list[1]]
+
+        proposal2 = strategy_service.create_proposal_from_query(query2)
+
+        self.assertNotEqual(proposal1.proposal_id, proposal2.proposal_id)
+        self.assertEqual(len(proposal1.top_candidates), 1) # From mock_gse_metadata_list[0] -> mock_ranked_candidates
+        self.assertEqual(len(proposal2.top_candidates), 1) # From mock_ranked_candidates_q2
+
+        # Ensure mocks were called again for the second query
+        self.assertEqual(self.mock_llm_gateway.get_structured_response.call_count, call_count_interpret1 + 2) # interpret + analyze for Q2
+        self.assertEqual(self.mock_llm_gateway.get_text_response.call_count, call_count_text1 + 1)
+        self.assertEqual(self.mock_ncbi_client_instance.search_geo.call_count, call_count_search1 + 1)
+        self.assertEqual(self.mock_ncbi_client_instance.get_geo_summaries.call_count, call_count_summary1 + 1)
+
+
 if __name__ == '__main__':
     unittest.main()
 ```
