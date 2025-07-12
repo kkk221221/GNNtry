@@ -5,8 +5,9 @@ Unit tests for the StrategyService in Module 1.
 import unittest
 from unittest.mock import Mock, patch, call # Using patch for more complex mocks if needed
 import time # For testing cache expiry
-from typing import List
+from typing import List, Dict, Any
 import json
+import os
 
 # Modules to test
 from aibiowflow.module_1_strategy.service import StrategyService
@@ -49,10 +50,29 @@ class TestStrategyService(unittest.TestCase):
         # (e.g., via the DASHSCOPE_API_KEY environment variable).
         # The Qwen API key sk-f0a749a993ba42769278527d8d5159ec must be available via this env var.
         if LLMGateway:
-            # Assuming tests are run from the project root directory containing 'aibiowflow'
+            # Construct absolute paths to config and prompt files
+            # Try relative path first (assuming tests are run from project root)
+            config_file_path = os.path.join("aibiowflow", "llm_gateway", "config.yaml")
+            prompt_file_path = os.path.join("aibiowflow", "llm_gateway", "prompts_m1.toml")
+            print(f"Attempting relative config path: {config_file_path}")
+
+            if not os.path.exists(config_file_path):
+                print(f"Relative config path not found: {config_file_path}")
+                # Fallback: if not found, construct path from this file's location
+                current_script_dir = os.path.dirname(os.path.abspath(__file__))
+                # Path to project root from aibiowflow/tests/module_1_strategy/test_strategy_service.py
+                # is ../../.. (three levels up)
+                project_root_dir = os.path.abspath(os.path.join(current_script_dir, "..", "..", ".."))
+                print(f"Calculated project_root_dir: {project_root_dir}")
+
+                config_file_path = os.path.join(project_root_dir, "aibiowflow", "llm_gateway", "config.yaml")
+                prompt_file_path = os.path.join(project_root_dir, "aibiowflow", "llm_gateway", "prompts_m1.toml")
+                print(f"Attempting absolute config path: {config_file_path}")
+
+
             self.llm_gateway_instance = LLMGateway(
-                config_path="aibiowflow/llm_gateway/config.yaml",
-                prompt_path="aibiowflow/llm_gateway/prompts_m1.toml"
+                config_path=config_file_path,
+                prompt_path=prompt_file_path
             )
         else:
             self.llm_gateway_instance = Mock() # Fallback if LLMGateway import failed
