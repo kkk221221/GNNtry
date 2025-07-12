@@ -1,0 +1,61 @@
+# -*- coding: utf-8 -*-
+# Configuration for Module 1: Literature & Strategy Service
+
+# NCBI Client Configuration
+# -------------------------
+# API key for NCBI E-utilities. It's highly recommended to set this via an environment variable.
+# The StrategyService will typically pass this key to the NCBIClient.
+ncbi_api_key: "env:NCBI_API_KEY" # Example: export NCBI_API_KEY="your_actual_api_key"
+
+# Base URLs for NCBI E-utility services.
+# Defaults are provided in NCBIClient, but can be overridden here if necessary.
+ncbi_esearch_url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
+ncbi_esummary_url: "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
+
+# Default retry parameters for NCBI API calls made by NCBIClient.
+# These can be overridden if NCBIClient is instantiated with specific config.
+ncbi_retry_attempts: 3    # Max number of retries (excluding the initial attempt)
+ncbi_backoff_factor: 1.0  # Base factor for exponential backoff in seconds
+
+# Heuristic Filtering Rules for GEO Datasets
+# ------------------------------------------
+# These rules are applied after fetching initial search results from GEO
+# and before sending candidates for deep LLM analysis.
+heuristic_filtering:
+  allowed_species:
+    - "Homo sapiens"
+    - "Mus musculus"
+  min_sample_count: 6
+  require_srp_id: true # Whether a linked SRA Project ID (SRP) is mandatory
+  # Keywords to match in title/summary to identify relevant experiment types.
+  # This is a simple check; more sophisticated matching might be needed.
+  # The logic should check if ANY of these keywords are present.
+  match_experiment_type_keywords:
+    - "Expression profiling by high throughput sequencing"
+    - "RNA-seq"
+    - "rna seq" # Case-insensitivity should be handled in code
+    - "transcriptome"
+    - "transcriptomic"
+    # Add other relevant keywords for WGS, ChIP-seq etc. if primary focus expands
+
+# Caching Configuration for StrategyService
+# -----------------------------------------
+# Defines Time-To-Live (TTL) for cached results of user queries.
+cache_ttl_seconds: 86400 # 24 hours (24 * 60 * 60)
+
+# LLM Interaction Parameters (Module 1 Specific, if any)
+# -------------------------------------------------------
+# While most LLM parameters are handled by the LLM Gateway and its global config,
+# this section could hold module-specific overrides or default model aliases if needed.
+# For now, this is a placeholder.
+# llm_params:
+#   default_intent_model_alias: "fast_model" # Alias for QueryIntent task
+#   default_search_translation_model_alias: "fast_model" # Alias for search string generation
+#   default_candidate_analysis_model_alias: "smart_model" # Alias for ranking candidates
+
+# Logging Configuration (Module Specific, if needed)
+# --------------------------------------------------
+# Specific logging settings for this module, if they need to differ from global app logging.
+# module_logging_level: "DEBUG" # Example: "INFO", "DEBUG", "WARNING"
+
+# --- End of Module 1 Configuration ---

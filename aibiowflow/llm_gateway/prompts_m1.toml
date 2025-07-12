@@ -1,0 +1,81 @@
+# -*- coding: utf-8 -*-
+# Prompt Templates for Module 1: Literature & Strategy Service
+
+# --- Prompt 1: Interpret User Query ---
+[interpret_query]
+template = """\
+分析以下科研问题，提取关键信息。
+问题: "{user_query}"
+
+请以JSON格式返回，该JSON对象必须严格符合以下Pydantic模型的定义:
+```json
+{{
+  "primary_disease": "string, 主要关注的疾病或生物学状况",
+  "primary_gene": "string, optional, 主要关注的基因 (如果明确提及)",
+  "species": ["string, 研究涉及的物种列表 (例如 ['Homo sapiens', 'Mus musculus'])"],
+  "research_goal": "enum, 用户的核心研究目标, 可选值: 'DEG', 'Variant', 'Epigenomics', 'Other'",
+  "suggested_analysis_type": "enum, 根据用户查询建议的生物信息学分析类型, 可选值: 'RNA-seq', 'WGS', 'ChIP-seq', 'Other', 'Unknown'"
+}}
+```
+确保JSON输出是单一完整的JSON对象，不包含任何额外的解释性文本或markdown标记。
+"""
+description = "将用户的自然语言科研问题解析为结构化的QueryIntent对象。"
+# Pydantic Model: QueryIntent (defined in aibiowflow.module_1_strategy.data_models)
+# Input variables: user_query (str)
+
+# --- Prompt 2: Translate Intent to Search Query ---
+[translate_to_search]
+template = """\
+基于以下JSON格式的研究意图:
+```json
+{intent_json}
+```
+请构建一个针对 NCBI GEO (Gene Expression Omnibus) 数据库优化的布尔逻辑搜索查询字符串。
+查询字符串应尽可能精确，结合疾病、基因、物种和分析类型等信息，以提高搜索结果的相关性。
+例如，如果意图是研究人类阿尔茨海默病中的RNA-seq数据，查询可能类似于：
+(("Alzheimer's disease" OR "Alzheimer disease") AND ("RNA-seq" OR "transcriptome") AND "Homo sapiens"[Organism])
+
+请仅返回优化后的搜索查询字符串，不要包含任何额外的解释或标签。
+"""
+description = "将结构化的QueryIntent对象转换为针对NCBI GEO优化的布尔搜索字符串。"
+# Input variables: intent_json (str, JSON string representation of QueryIntent)
+# Output: Plain text search string
+
+# --- Prompt 3: Analyze Candidate Datasets ---
+[analyze_candidates]
+template = """\
+作为一名资深的生物信息学专家，请评估以下 GEO 数据集列表，以确定它们是否适合用于深入研究科研问题: "{user_query}"。
+
+对于列表中的每一个数据集，请执行以下操作：
+1.  仔细阅读其标题和摘要。
+2.  评估其与上述科研问题的相关性。
+3.  评估其实验设计（例如样本数量、对照组设置等，如果信息可得）是否适合该研究。
+4.  给出一个从1.0到10.0的推荐分数（`rank_score`），其中10.0表示完美匹配且强烈推荐。
+5.  提供一段简短但具体的推荐理由（`llm_recommendation_reason`），解释你给出该分数的原因，并指出该数据集的潜在优势或不足之处。
+
+以下是待评估的数据集信息列表 (JSON格式):
+```json
+{candidate_list_json}
+```
+每个数据集对象包含以下字段: `gse_id`, `srp_id` (optional), `title`, `summary`, `species`, `sample_count`.
+
+请以JSON格式返回一个包含所有评估结果的列表。列表中的每个对象都必须严格符合以下Pydantic模型的定义 (仅包含你生成的 `llm_recommendation_reason` 和 `rank_score`，并复制原始数据集信息):
+```json
+{{
+  "gse_id": "string, 例如 GSE12345",
+  "srp_id": "string, optional, 例如 SRP123456",
+  "title": "string, 数据集的原始标题",
+  "summary": "string, 数据集的原始摘要",
+  "species": ["string"],
+  "sample_count": "integer",
+  "llm_recommendation_reason": "string, 你对该数据集的推荐理由",
+  "rank_score": "float, 你的推荐分数 (1.0-10.0)"
+}}
+```
+确保整个输出是一个单一的、合法的JSON列表，不包含任何额外的解释性文本或markdown标记。
+"""
+description = "利用LLM对初筛后的候选GEO数据集进行深度分析、排序和推荐理由生成。"
+# Pydantic Model for output list elements: DatasetCandidate (defined in aibiowflow.module_1_strategy.data_models)
+# Input variables: user_query (str), candidate_list_json (str, JSON string representation of a list of dataset metadata objects)
+
+[end of aibiowflow/llm_gateway/prompts_m1.toml]
