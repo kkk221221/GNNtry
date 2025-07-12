@@ -77,5 +77,3 @@ template = """\
 description = "利用LLM对初筛后的候选GEO数据集进行深度分析、排序和推荐理由生成。"
 # Pydantic Model for output list elements: DatasetCandidate (defined in aibiowflow.module_1_strategy.data_models)
 # Input variables: user_query (str), candidate_list_json (str, JSON string representation of a list of dataset metadata objects)
-
-[end of aibiowflow/llm_gateway/prompts_m1.toml]
