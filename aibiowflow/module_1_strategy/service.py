@@ -338,7 +338,7 @@ class StrategyService:
             # Step 1: Interpret user query (LLM Call)
             self.logger.info("Step 1: Interpreting user query...")
             query_intent: QueryIntent = self._interpret_user_query(user_query)
-            self.logger.info(f"Query interpreted: {query_intent.model_dump_json(indent=2, ensure_ascii=False)}") # Log full JSON
+            self.logger.info(f"Query interpreted: {query_intent.model_dump_json(indent=2)}") # Log full JSON
 
             # Step 2: Translate intent to search query (LLM Call)
             self.logger.info("Step 2: Translating intent to GEO search query...")
@@ -405,7 +405,7 @@ class StrategyService:
                 top_candidates=ranked_candidates # This now uses the result from _analyze_candidates_with_llm
             )
             self.logger.info(f"Analysis proposal {proposal_id} created successfully for user query '{user_query}'.")
-            self.logger.debug(f"Final AnalysisProposal: {analysis_proposal.model_dump_json(indent=2, ensure_ascii=False)}")
+            self.logger.debug(f"Final AnalysisProposal: {analysis_proposal.model_dump_json(indent=2)}")
 
 
             # Step 8: Store in cache

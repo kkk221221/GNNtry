@@ -403,7 +403,7 @@ class TestNCBIClient(unittest.TestCase):
         self.assertEqual(summaries[3]["species"], []) # N/A results in empty list
         self.assertEqual(summaries[4]["species"], []) # Missing results in empty
         self.assertEqual(summaries[5]["species"], []) # Empty string results in empty
-        self.assertEqual(summaries[6]["species"], ["123", "Bos taurus"]) # Converts non-strings to strings
+        self.assertEqual(summaries[6]["species"], ["Bos taurus"]) # Should only include strings from the list
 
 if __name__ == '__main__':
     unittest.main()
