@@ -326,5 +326,3 @@ if __name__ == "__main__":
         print(f"NCBI Client Error: {e}")
     except Exception as e_main:
         print(f"An unexpected error occurred in example usage: {e_main}")
-
-```
