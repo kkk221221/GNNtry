@@ -7,6 +7,8 @@
 !src/**
 !tests/
 !tests/**
+!examples/
+!examples/**
 __pycache__/
 !docs/
 !docs/qwen_ptis_overview.md

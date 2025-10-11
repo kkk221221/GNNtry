@@ -32,10 +32,19 @@ src/ptis/
    PYTHONPATH=src python -m unittest discover tests
    ```
 
-4. 启动 HTTP 服务（可选）：
+4. （可选）使用真实 DashScope API 执行一次联调：
+
+   ```bash
+   export DASHSCOPE_API_KEY="<你的 DashScope API Key>"
+   # 可选：覆写使用的模型，默认 qwen-plus
+   export PTIS_MODEL="qwen-plus"
+   PYTHONPATH=src python examples/run_real_infer.py
+   ```
+
+5. 启动 HTTP 服务（可选）：
 
    ```bash
    PYTHONPATH=src python -c "from ptis.api import run_server, PTISRequestHandler; from ptis.config import PTISConfig, QwenProviderConfig; server = run_server(PTISConfig(qwen=QwenProviderConfig(api_key='YOUR_KEY'))); input('Press Enter to stop...'); server.shutdown()"
    ```
 
-> **提示**：默认不会真正调用外部 Qwen API。若需联机推理，可移除 `PTISOrchestrator` 的 `set_call_model_override` 并提供真实 API Key。
+> **提示**：默认单元测试会覆盖调用逻辑，但不会访问真实 Qwen API。若需自定义联机推理，可参考 `examples/run_real_infer.py`。
