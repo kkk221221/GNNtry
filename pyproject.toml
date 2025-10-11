@@ -1,0 +1,12 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ptis"
+version = "0.1.0"
+description = "Parallel Thinking Inference System focusing on Qwen API routing"
+readme = "README.md"
+authors = [{name = "PTIS Team"}]
+requires-python = ">=3.10"
+dependencies = []

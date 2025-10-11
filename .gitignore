@@ -1,0 +1,12 @@
+# 默认忽略所有文件
+*
+!.gitignore
+!README.md
+!pyproject.toml
+!src/
+!src/**
+!tests/
+!tests/**
+__pycache__/
+!docs/
+!docs/qwen_ptis_overview.md
