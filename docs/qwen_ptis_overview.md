@@ -128,7 +128,7 @@
 ## 3.5 Tools & RAG
 
 * **RAG**：BM25+向量召回+重排序；引用对齐与证据评分；per-branch 检索域隔离。
-* **执行工具**：Python 沙箱、数值/符号计算、网络检索、SQL/Graph 查询。
+* **执行工具**：Python 沙箱、数值/符号计算、网络检索、SQL/Graph 查询。实现中约定在生成内容中嵌入 `{{python: ...}}` 触发受限 Python 沙箱执行，结果会原位替换占位符并写入证据库；RAG 工具可通过 `register_rag_documents` 预先索引域内文档，推理时自动检索引用。
 * **工具治理**：Schema 校验、单元测试化验证、速率与配额、审计日志。
 
 ## 3.6 Safety & Governance

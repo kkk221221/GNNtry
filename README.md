@@ -41,7 +41,9 @@ src/ptis/
    PYTHONPATH=src python examples/run_real_infer.py
    ```
 
-5. 启动 HTTP 服务（可选）：
+5. 工具使用约定：当计划中允许 Python 沙箱时，可在模型回答中嵌入 `{{python: 表达式}}` 以触发沙箱计算，系统会将结果写回原位置并记录为证据；若允许 RAG 工具，可通过 `PTISOrchestrator.register_rag_documents` 预先索引文档，推理阶段将自动检索引用。
+
+6. 启动 HTTP 服务（可选）：
 
    ```bash
    PYTHONPATH=src python -c "from ptis.api import run_server, PTISRequestHandler; from ptis.config import PTISConfig, QwenProviderConfig; server = run_server(PTISConfig(qwen=QwenProviderConfig(api_key='YOUR_KEY'))); input('Press Enter to stop...'); server.shutdown()"
